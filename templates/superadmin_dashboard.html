@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <h2>Super Admin Dashboard</h2>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card text-center shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h1 class="display-4 text-primary">{{ stats.total }}</h1>
+                <p class="text-muted mb-0">Total Tickets</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h1 class="display-4 text-warning">{{ stats.open }}</h1>
+                <p class="text-muted mb-0">Open Unclaimed</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h1 class="display-4 text-info">{{ stats.in_progress }}</h1>
+                <p class="text-muted mb-0">In Progress</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h1 class="display-4 text-danger">{{ stats.escalated }}</h1>
+                <p class="text-muted mb-0">Escalated</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white pb-0 pt-4 border-0">
+        <h5>Recent Tickets (System Wide)</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Ticket</th>
+                        <th>Student</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tickets %}
+                    <tr class="clickable-row" data-href="{{ url_for('ticket_details', id=t.id) }}">
+                        <td><strong>{{ t.ticket_code }}</strong></td>
+                        <td>{{ t.student_name }}</td>
+                        <td>{{ t.department_name }}</td>
+                        <td><span class="badge status-{{ t.status | lower }}">{{ t.status }}</span></td>
+                        <td><small class="text-muted">{{ t.created_at.strftime('%b %d, %Y') }}</small></td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="text-center py-4">No tickets in the system.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

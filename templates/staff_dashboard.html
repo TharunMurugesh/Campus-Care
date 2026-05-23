@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <h2>My Claimed Tickets</h2>
+    <p class="text-muted">Tickets you are currently working on.</p>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Ticket Code</th>
+                        <th>Title</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Last Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tickets %}
+                    <tr class="clickable-row" data-href="{{ url_for('ticket_details', id=t.id) }}">
+                        <td><strong>{{ t.ticket_code }}</strong></td>
+                        <td>{{ t.title }}</td>
+                        <td><span class="badge priority-{{ t.priority | lower }}">{{ t.priority }}</span></td>
+                        <td><span class="badge status-{{ t.status | lower }}">{{ t.status }}</span></td>
+                        <td><small class="text-muted">{{ t.updated_at.strftime('%b %d, %Y %H:%M') }}</small></td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="text-center py-4">You have no active claimed tickets.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

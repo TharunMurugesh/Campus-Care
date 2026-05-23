@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <h2>Department Ticket Queue</h2>
+    <p class="text-muted">Unclaimed issues reported to your department.</p>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Ticket Code</th>
+                        <th>Student</th>
+                        <th>Title</th>
+                        <th>Priority</th>
+                        <th>Created</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in tickets %}
+                    <tr>
+                        <td><strong>{{ t.ticket_code }}</strong></td>
+                        <td>{{ t.student_name }}</td>
+                        <td>{{ t.title }}</td>
+                        <td><span class="badge priority-{{ t.priority | lower }}">{{ t.priority }}</span></td>
+                        <td><small class="text-muted">{{ t.created_at.strftime('%b %d, %Y') }}</small></td>
+                        <td>
+                            <form method="POST" action="{{ url_for('claim_ticket', id=t.id) }}" class="d-inline claim-form">
+                                <button type="button" class="btn btn-sm btn-success confirm-claim">Claim Ticket</button>
+                            </form>
+                            <a href="{{ url_for('ticket_details', id=t.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center py-4">No open tickets in your department queue! 🎉</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

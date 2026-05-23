@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="mb-4">
+            <h2>Manage Departments</h2>
+        </div>
+        
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Department Name</th>
+                            <th>Total Tickets Handled</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in departments %}
+                        <tr>
+                            <td>{{ d.id }}</td>
+                            <td><strong>{{ d.name }}</strong></td>
+                            <td>{{ d.ticket_count }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-center">No departments exist.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white pb-0 pt-4 border-0">
+                <h5>Add New Department</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('manage_departments') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Department Name</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Add Department</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
