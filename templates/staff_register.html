@@ -19,8 +19,15 @@
                         <input type="email" name="email" class="form-control" required placeholder="staff@campus.edu">
                     </div>
                     <div class="mb-3">
+                        <label class="form-label fw-semibold">Role</label>
+                        <select name="role" class="form-select" id="roleSelect" required>
+                            <option value="staff" selected>Staff Member</option>
+                            <option value="superadmin">Network Admin (Super Admin)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="departmentDiv">
                         <label class="form-label fw-semibold">Department</label>
-                        <select name="department_id" class="form-select" required>
+                        <select name="department_id" class="form-select" id="departmentSelect" required>
                             <option value="">Select Department...</option>
                             {% for d in departments %}
                             <option value="{{ d.id }}">{{ d.name }}</option>
@@ -40,4 +47,15 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.getElementById('roleSelect').addEventListener('change', function() {
+        var deptSelect = document.getElementById('departmentSelect');
+        if (this.value === 'superadmin') {
+            deptSelect.required = false;
+        } else {
+            deptSelect.required = true;
+        }
+    });
+</script>
 {% endblock %}

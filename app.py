@@ -123,8 +123,15 @@ def staff_register():
         name = request.form['name']
         email = request.form['email']
         password = request.form['password']
-        department_id = request.form['department_id']
-        role = 'staff'
+        department_id = request.form.get('department_id')
+        role = request.form.get('role', 'staff')
+        
+        if role not in ['staff', 'superadmin']:
+            role = 'staff'
+            
+        if department_id == '':
+            department_id = None
+            
         hashed_password = generate_password_hash(password)
         
         try:
@@ -133,7 +140,7 @@ def staff_register():
                 (name, email, hashed_password, role, department_id),
                 commit=True
             )
-            flash("Staff account created successfully! You can now log in.", "success")
+            flash("Account created successfully! You can now log in.", "success")
             return redirect(url_for('staff_login'))
         except Exception:
             flash("Email already registered.", "danger")
@@ -243,6 +250,44 @@ def claim_ticket(id):
     flash("Ticket claimed successfully.", "success")
     return redirect(url_for('ticket_details', id=id))
 
+@app.route('/ticket/<int:id>/assign', methods=['POST'])
+@login_required
+@role_required('superadmin')
+def assign_ticket(id):
+    staff_id = request.form.get('staff_id')
+    user_id = session['user_id']
+    
+    if not staff_id:
+        flash("Please select a staff member.", "danger")
+        return redirect(url_for('ticket_details', id=id))
+        
+    ticket = execute_query("SELECT * FROM tickets WHERE id = %s", (id,), fetch=True)
+    if not ticket:
+        abort(404)
+        
+    new_status = 'CLAIMED' if ticket['status'] == 'OPEN' else ticket['status']
+    
+    execute_query(
+        "UPDATE tickets SET assigned_to = %s, status = %s, claimed_at = COALESCE(claimed_at, CURRENT_TIMESTAMP), updated_at = CURRENT_TIMESTAMP WHERE id = %s",
+        (staff_id, new_status, id), commit=True
+    )
+    
+    log_activity(id, "Ticket assigned by Super Admin", user_id)
+    flash("Ticket successfully assigned to staff member.", "success")
+    return redirect(url_for('ticket_details', id=id))
+
+@app.route('/ticket/<int:id>/delete', methods=['POST'])
+@login_required
+@role_required('superadmin')
+def delete_ticket(id):
+    ticket = execute_query("SELECT * FROM tickets WHERE id = %s", (id,), fetch=True)
+    if not ticket:
+        abort(404)
+        
+    execute_query("DELETE FROM tickets WHERE id = %s", (id,), commit=True)
+    flash("Ticket deleted permanently.", "success")
+    return redirect(url_for('superadmin_dashboard'))
+
 @app.route('/ticket/<int:id>/status', methods=['POST'])
 @login_required
 def update_status(id):
@@ -315,7 +360,14 @@ def ticket_details(id):
         (id,), fetch=True, fetchall=True
     )
     
-    return render_template('ticket_details.html', ticket=ticket, comments=comments, activities=activities)
+    staff_members = []
+    if role == 'superadmin':
+        staff_members = execute_query(
+            "SELECT id, name FROM users WHERE role = 'staff' AND department_id = %s ORDER BY name",
+            (ticket['department_id'],), fetch=True, fetchall=True
+        )
+    
+    return render_template('ticket_details.html', ticket=ticket, comments=comments, activities=activities, staff_members=staff_members)
 
 @app.route('/ticket/<int:id>/comment', methods=['POST'])
 @login_required
