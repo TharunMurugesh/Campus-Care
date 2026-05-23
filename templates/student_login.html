@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow-lg border-0 login-card">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <h3 class="fw-bold text-primary">Student Portal</h3>
+                    <p class="text-muted">Login to report and track issues</p>
+                </div>
+                <form method="POST" action="{{ url_for('student_login') }}">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Email Address</label>
+                        <input type="email" name="email" class="form-control" required placeholder="student@campus.edu">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Password</label>
+                        <input type="password" name="password" class="form-control" required placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 btn-lg shadow-sm">Login as Student</button>
+                </form>
+                <div class="text-center mt-4">
+                    <small class="text-muted">New student? <a href="{{ url_for('student_register') }}" class="fw-bold text-decoration-none">Register here</a></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

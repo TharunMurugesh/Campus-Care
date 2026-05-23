@@ -36,8 +36,20 @@
                         <li class="nav-item"><span class="nav-link text-white-50">Hello, {{ session.get('name') }}</span></li>
                         <li class="nav-item"><a class="nav-link btn btn-sm btn-outline-light ms-2" href="{{ url_for('logout') }}">Logout</a></li>
                     {% else %}
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('register') }}">Register</a></li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Student Portal</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('student_login') }}">Login</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('student_register') }}">Register</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Staff Portal</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{{ url_for('staff_login') }}">Login</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('staff_register') }}">Register</a></li>
+                            </ul>
+                        </li>
                     {% endif %}
                 </ul>
             </div>

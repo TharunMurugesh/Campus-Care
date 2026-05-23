@@ -14,6 +14,7 @@
                     <tr>
                         <th>Ticket Code</th>
                         <th>Title</th>
+                        <th>Reported By</th>
                         <th>Department</th>
                         <th>Priority</th>
                         <th>Status</th>
@@ -25,6 +26,13 @@
                     <tr class="clickable-row" data-href="{{ url_for('ticket_details', id=t.id) }}">
                         <td><strong>{{ t.ticket_code }}</strong></td>
                         <td>{{ t.title }}</td>
+                        <td>
+                            {% if t.student_id == session.user_id %}
+                                <span class="badge bg-primary">Me</span>
+                            {% else %}
+                                {{ t.student_name }}
+                            {% endif %}
+                        </td>
                         <td>{{ t.department_name }}</td>
                         <td><span class="badge priority-{{ t.priority | lower }}">{{ t.priority }}</span></td>
                         <td><span class="badge status-{{ t.status | lower }}">{{ t.status }}</span></td>

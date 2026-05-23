@@ -17,7 +17,7 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             flash("Please log in to access this page.", "warning")
-            return redirect(url_for('login'))
+            return redirect(url_for('student_login'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -26,7 +26,7 @@ def role_required(role):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if 'user_id' not in session:
-                return redirect(url_for('login'))
+                return redirect(url_for('student_login'))
             if session.get('role') != role:
                 abort(403)
             return f(*args, **kwargs)
@@ -50,39 +50,36 @@ def index():
             return redirect(url_for('staff_dashboard'))
         elif role == 'superadmin':
             return redirect(url_for('superadmin_dashboard'))
-    return redirect(url_for('login'))
+    return redirect(url_for('student_login'))
 
 # --- Auth Routes ---
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
+@app.route('/student/login', methods=['GET', 'POST'])
+def student_login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
         
-        user = execute_query("SELECT * FROM users WHERE email = %s", (email,), fetch=True)
+        user = execute_query("SELECT * FROM users WHERE email = %s AND role = 'student'", (email,), fetch=True)
         
         if user and check_password_hash(user['password_hash'], password):
             session['user_id'] = user['id']
             session['role'] = user['role']
             session['name'] = user['name']
-            session['department_id'] = user['department_id']
             
             flash(f"Welcome back, {user['name']}!", "success")
             return redirect(url_for('index'))
         else:
-            flash("Invalid email or password.", "danger")
+            flash("Invalid email or password for Student.", "danger")
             
-    return render_template('login.html')
+    return render_template('student_login.html')
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
+@app.route('/student/register', methods=['GET', 'POST'])
+def student_register():
     if request.method == 'POST':
         name = request.form['name']
         email = request.form['email']
         password = request.form['password']
-        
-        # Default registration is for students. Staff/Admins are managed by superadmin.
         role = 'student'
         hashed_password = generate_password_hash(password)
         
@@ -93,17 +90,62 @@ def register():
                 commit=True
             )
             flash("Registration successful! You can now log in.", "success")
-            return redirect(url_for('login'))
-        except Exception as e:
+            return redirect(url_for('student_login'))
+        except Exception:
             flash("Email already registered.", "danger")
             
-    return render_template('register.html')
+    return render_template('student_register.html')
+
+@app.route('/staff/login', methods=['GET', 'POST'])
+def staff_login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        
+        user = execute_query("SELECT * FROM users WHERE email = %s AND role IN ('staff', 'superadmin')", (email,), fetch=True)
+        
+        if user and check_password_hash(user['password_hash'], password):
+            session['user_id'] = user['id']
+            session['role'] = user['role']
+            session['name'] = user['name']
+            session['department_id'] = user['department_id']
+            
+            flash(f"Welcome back, {user['name']}!", "success")
+            return redirect(url_for('index'))
+        else:
+            flash("Invalid email or password for Staff/Admin.", "danger")
+            
+    return render_template('staff_login.html')
+
+@app.route('/staff/register', methods=['GET', 'POST'])
+def staff_register():
+    if request.method == 'POST':
+        name = request.form['name']
+        email = request.form['email']
+        password = request.form['password']
+        department_id = request.form['department_id']
+        role = 'staff'
+        hashed_password = generate_password_hash(password)
+        
+        try:
+            execute_query(
+                "INSERT INTO users (name, email, password_hash, role, department_id) VALUES (%s, %s, %s, %s, %s)",
+                (name, email, hashed_password, role, department_id),
+                commit=True
+            )
+            flash("Staff account created successfully! You can now log in.", "success")
+            return redirect(url_for('staff_login'))
+        except Exception:
+            flash("Email already registered.", "danger")
+            
+    departments = execute_query("SELECT * FROM departments ORDER BY name", fetch=True, fetchall=True)
+    return render_template('staff_register.html', departments=departments)
 
 @app.route('/logout')
 def logout():
     session.clear()
     flash("You have been logged out.", "info")
-    return redirect(url_for('login'))
+    return redirect(url_for('student_login'))
 
 # --- Student Routes ---
 
@@ -111,12 +153,12 @@ def logout():
 @login_required
 @role_required('student')
 def student_dashboard():
-    user_id = session['user_id']
     tickets = execute_query(
-        "SELECT t.*, d.name as department_name FROM tickets t "
+        "SELECT t.*, d.name as department_name, u.name as student_name FROM tickets t "
         "JOIN departments d ON t.department_id = d.id "
-        "WHERE t.student_id = %s ORDER BY t.created_at DESC",
-        (user_id,), fetch=True, fetchall=True
+        "JOIN users u ON t.student_id = u.id "
+        "ORDER BY t.created_at DESC",
+        fetch=True, fetchall=True
     )
     return render_template('student_dashboard.html', tickets=tickets)
 
@@ -260,8 +302,6 @@ def ticket_details(id):
         abort(404)
         
     # Visibility checks
-    if role == 'student' and ticket['student_id'] != user_id:
-        abort(403)
     if role == 'staff' and ticket['department_id'] != session['department_id']:
         abort(403)
         
