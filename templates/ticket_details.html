@@ -1,168 +1,124 @@
-{% extends "base.html" %}
-
+{% extends 'base.html' %}
 {% block content %}
-<div class="row">
-    <!-- Ticket Details Section -->
+<div class="row mt-3">
     <div class="col-md-8">
         <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header bg-white pb-0 pt-4 border-0 d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">{{ ticket.title }}</h4>
-                <span class="badge status-{{ ticket.status | lower }} fs-6">{{ ticket.status }}</span>
-            </div>
             <div class="card-body p-4">
-                <div class="row mb-4 text-muted small">
-                    <div class="col-sm-3"><strong>Ticket:</strong> {{ ticket.ticket_code }}</div>
-                    <div class="col-sm-3"><strong>Dept:</strong> {{ ticket.department_name }}</div>
-                    <div class="col-sm-3"><strong>Priority:</strong> <span class="badge priority-{{ ticket.priority | lower }}">{{ ticket.priority }}</span></div>
-                    <div class="col-sm-3"><strong>Created:</strong> {{ ticket.created_at.strftime('%b %d, %H:%M') }}</div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="card-title mb-0">{{ ticket.ticket_code }}: {{ ticket.title }}</h4>
+                    <span class="badge bg-secondary fs-6">{{ ticket.status }}</span>
                 </div>
                 
-                <h6 class="text-muted mb-2">Description</h6>
-                <div class="p-3 bg-light rounded text-dark mb-4">
-                    {{ ticket.description | replace('\n', '<br>') | safe }}
+                <div class="row mb-4 text-muted small">
+                    <div class="col-sm-3"><strong>Department:</strong> {{ ticket.department_name }}</div>
+                    <div class="col-sm-3"><strong>Priority:</strong> {{ ticket.priority }}</div>
+                    <div class="col-sm-3"><strong>Student:</strong> {{ ticket.student_name }}</div>
+                    <div class="col-sm-3"><strong>Assigned:</strong> {{ ticket.assignee_name or 'Unassigned' }}</div>
+                </div>
+                
+                <div class="mb-4">
+                    <h6>Description</h6>
+                    <div class="p-3 bg-light rounded">{{ ticket.description }}</div>
                 </div>
 
-                <!-- Staff/Admin Action Controls -->
-                {% if session.role in ['staff', 'superadmin'] %}
-                    <div class="border-top pt-4">
-                        <h6>Management Actions</h6>
-                        
-                        <!-- Claiming -->
-                        {% if ticket.status == 'OPEN' and session.role == 'staff' and session.department_id == ticket.department_id %}
-                        <form method="POST" action="{{ url_for('claim_ticket', id=ticket.id) }}" class="d-inline claim-form mb-3 d-block border-bottom pb-3">
-                            <button type="button" class="btn btn-success confirm-claim">Claim this Ticket</button>
+                <!-- Staff/Admin Controls -->
+                {% if session.get('role') in ['staff', 'campus_admin', 'superadmin'] %}
+                    {% if ticket.status == 'OPEN' and session.get('role') == 'staff' %}
+                        <form method="POST" action="{{ url_for('claim_ticket', id=ticket.id) }}" class="d-inline">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-primary">Claim Ticket</button>
                         </form>
-                        {% endif %}
-
-                        <!-- Super Admin Assignment -->
-                        {% if session.role == 'superadmin' and ticket.status not in ['RESOLVED', 'CLOSED'] %}
-                        <form method="POST" action="{{ url_for('assign_ticket', id=ticket.id) }}" class="mt-3 border-bottom pb-3 mb-3">
-                            <div class="row align-items-end">
-                                <div class="col-md-9">
-                                    <label class="form-label text-danger fw-bold">Super Admin Override: Assign to Staff</label>
-                                    <select name="staff_id" class="form-select" required>
-                                        <option value="" disabled selected>Select staff member from {{ ticket.department_name }}...</option>
-                                        {% for staff in staff_members %}
-                                        <option value="{{ staff.id }}" {% if ticket.assigned_to == staff.id %}selected{% endif %}>{{ staff.name }}</option>
-                                        {% endfor %}
+                    {% endif %}
+                    
+                    {% if ticket.assigned_to == session.get('user_id') or session.get('role') in ['campus_admin', 'superadmin'] %}
+                        <form method="POST" action="{{ url_for('update_status', id=ticket.id) }}" class="mt-3 p-3 bg-light rounded border">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                            <h6>Update Status</h6>
+                            <div class="row g-2">
+                                <div class="col-sm-6">
+                                    <select name="status" class="form-select" id="statusSelect" required>
+                                        <option value="IN_PROGRESS" {% if ticket.status == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
+                                        <option value="RESOLVED" {% if ticket.status == 'RESOLVED' %}selected{% endif %}>Resolved</option>
+                                        <option value="CLOSED" {% if ticket.status == 'CLOSED' %}selected{% endif %}>Closed</option>
+                                        <option value="ESCALATED" {% if ticket.status == 'ESCALATED' %}selected{% endif %}>Escalated</option>
                                     </select>
                                 </div>
-                                <div class="col-md-3">
-                                    <button type="submit" class="btn btn-danger w-100">Force Assign</button>
+                                <div class="col-sm-4" id="escalationReasonContainer" style="display: none;">
+                                    <input type="text" name="escalation_reason" class="form-control" placeholder="Reason for escalation">
+                                </div>
+                                <div class="col-sm-2">
+                                    <button type="submit" class="btn btn-success w-100">Update</button>
                                 </div>
                             </div>
                         </form>
-                        {% endif %}
-
-                        <!-- Status Updates (Only assignee or superadmin) -->
-                        {% if (session.role == 'staff' and session.user_id == ticket.assigned_to) or session.role == 'superadmin' %}
-                            {% if ticket.status not in ['OPEN', 'CLOSED'] %}
-                            <form method="POST" action="{{ url_for('update_status', id=ticket.id) }}" class="mt-3">
-                                <div class="row align-items-end">
-                                    <div class="col-md-4">
-                                        <label class="form-label">Update Status</label>
-                                        <select name="status" class="form-select status-select" required>
-                                            <option value="" disabled selected>Change status to...</option>
-                                            {% if ticket.status != 'IN_PROGRESS' %}<option value="IN_PROGRESS">In Progress</option>{% endif %}
-                                            {% if ticket.status != 'ESCALATED' %}<option value="ESCALATED">Escalate</option>{% endif %}
-                                            {% if ticket.status != 'RESOLVED' %}<option value="RESOLVED">Resolve</option>{% endif %}
-                                            {% if ticket.status == 'RESOLVED' or session.role == 'superadmin' %}<option value="CLOSED">Close</option>{% endif %}
-                                        </select>
-                                    </div>
-                                    <div class="col-md-5" id="escalationReasonField" style="display:none;">
-                                        <label class="form-label">Escalation Reason</label>
-                                        <input type="text" name="escalation_reason" class="form-control" placeholder="Why escalate?">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <button type="submit" class="btn btn-primary w-100">Update</button>
-                                    </div>
-                                </div>
-                            </form>
-                            {% endif %}
-                        {% endif %}
-                        
-                        <!-- Super Admin Danger Zone -->
-                        {% if session.role == 'superadmin' %}
-                            <form method="POST" action="{{ url_for('delete_ticket', id=ticket.id) }}" class="mt-4 pt-3 border-top" onsubmit="return confirm('Are you sure you want to permanently delete this ticket? This action cannot be undone.');">
-                                <button type="submit" class="btn btn-outline-danger w-100 fw-bold">Delete Ticket Permanently</button>
-                            </form>
-                        {% endif %}
-                    </div>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>
 
-        <!-- Comments Section -->
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white pb-0 pt-4 border-0">
-                <h5>Comments</h5>
-            </div>
+        <div class="card shadow-sm border-0 mb-4">
             <div class="card-body p-4">
-                {% for c in comments %}
-                <div class="d-flex mb-3 p-3 bg-light rounded">
-                    <div class="flex-grow-1">
+                <h5 class="mb-3">Comments</h5>
+                {% for comment in comments %}
+                    <div class="mb-3 pb-3 border-bottom">
                         <div class="d-flex justify-content-between mb-1">
-                            <strong>{{ c.user_name }} <span class="badge bg-secondary ms-1">{{ c.user_role }}</span></strong>
-                            <small class="text-muted">{{ c.created_at.strftime('%b %d, %H:%M') }}</small>
+                            <strong>{{ comment.user_name }} <small class="text-muted">({{ comment.user_role }})</small></strong>
+                            <small class="text-muted">{{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
                         </div>
-                        <p class="mb-0">{{ c.comment }}</p>
+                        <p class="mb-0">{{ comment.comment }}</p>
                     </div>
-                </div>
                 {% else %}
-                <p class="text-muted">No comments yet.</p>
+                    <p class="text-muted">No comments yet.</p>
                 {% endfor %}
 
-                {% if ticket.status != 'CLOSED' %}
                 <form method="POST" action="{{ url_for('add_comment', id=ticket.id) }}" class="mt-4">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
-                        <textarea name="comment" class="form-control" rows="3" required placeholder="Type your comment..."></textarea>
+                        <textarea name="comment" class="form-control" rows="3" required placeholder="Add a comment..."></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary">Add Comment</button>
+                    <button type="submit" class="btn btn-outline-primary">Post Comment</button>
                 </form>
-                {% else %}
-                <div class="alert alert-secondary mt-3">This ticket is closed. No further comments can be added.</div>
-                {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Sidebar: Activity Timeline & Meta -->
     <div class="col-md-4">
-        <!-- Assignee Info -->
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-body">
-                <h6 class="text-muted">Assigned To</h6>
-                <div class="d-flex align-items-center mt-2">
-                    <div class="avatar bg-primary text-white rounded-circle text-center me-3" style="width: 40px; height: 40px; line-height: 40px;">
-                        {% if ticket.assignee_name %}{{ ticket.assignee_name[0] | upper }}{% else %}?{% endif %}
-                    </div>
-                    <div>
-                        <strong>{% if ticket.assignee_name %}{{ ticket.assignee_name }}{% else %}Unassigned{% endif %}</strong>
-                        <div class="small text-muted">{{ ticket.department_name }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Activity Timeline -->
         <div class="card shadow-sm border-0">
-            <div class="card-header bg-white pb-0 pt-4 border-0">
-                <h5>Activity Timeline</h5>
-            </div>
             <div class="card-body p-4">
+                <h5 class="mb-4">Activity Timeline</h5>
                 <div class="timeline">
-                    {% for a in activities %}
-                    <div class="timeline-item pb-3 mb-3 border-bottom">
-                        <div class="d-flex justify-content-between">
-                            <strong>{{ a.action }}</strong>
-                            <small class="text-muted">{{ a.created_at.strftime('%b %d') }}</small>
+                    {% for activity in activities %}
+                        <div class="timeline-item">
+                            <strong>{{ activity.action }}</strong><br>
+                            <small class="text-muted">
+                                By {{ activity.user_name or 'System' }} on {{ activity.created_at.strftime('%b %d, %H:%M') }}
+                            </small>
                         </div>
-                        <div class="small text-muted">by {{ a.user_name }}</div>
-                    </div>
+                    {% else %}
+                        <p class="text-muted">No activity recorded.</p>
                     {% endfor %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const statusSelect = document.getElementById('statusSelect');
+    const reasonContainer = document.getElementById('escalationReasonContainer');
+    
+    if (statusSelect && reasonContainer) {
+        statusSelect.addEventListener('change', function() {
+            if (this.value === 'ESCALATED') {
+                reasonContainer.style.display = 'block';
+                reasonContainer.querySelector('input').required = true;
+            } else {
+                reasonContainer.style.display = 'none';
+                reasonContainer.querySelector('input').required = false;
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

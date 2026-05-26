@@ -1,49 +1,46 @@
-{% extends "base.html" %}
-
+{% extends 'base.html' %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>My Tickets</h2>
-    <a href="{{ url_for('create_ticket') }}" class="btn btn-primary">+ Report Issue</a>
+    <a href="{{ url_for('create_ticket') }}" class="btn btn-primary">Create New Ticket</a>
 </div>
 
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Ticket Code</th>
-                        <th>Title</th>
-                        <th>Reported By</th>
-                        <th>Department</th>
-                        <th>Priority</th>
-                        <th>Status</th>
-                        <th>Created</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for t in tickets %}
-                    <tr class="clickable-row" data-href="{{ url_for('ticket_details', id=t.id) }}">
-                        <td><strong>{{ t.ticket_code }}</strong></td>
-                        <td>{{ t.title }}</td>
-                        <td>
-                            {% if t.student_id == session.user_id %}
-                                <span class="badge bg-primary">Me</span>
-                            {% else %}
-                                {{ t.student_name }}
-                            {% endif %}
-                        </td>
-                        <td>{{ t.department_name }}</td>
-                        <td><span class="badge priority-{{ t.priority | lower }}">{{ t.priority }}</span></td>
-                        <td><span class="badge status-{{ t.status | lower }}">{{ t.status }}</span></td>
-                        <td><small class="text-muted">{{ t.created_at.strftime('%b %d, %Y') }}</small></td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="6" class="text-center py-4">You haven't created any tickets yet.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Code</th>
+                    <th>Title</th>
+                    <th>Department</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Last Updated</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ticket in tickets %}
+                <tr>
+                    <td>{{ ticket.ticket_code }}</td>
+                    <td>{{ ticket.title }}</td>
+                    <td>{{ ticket.department_name }}</td>
+                    <td>
+                        {% if ticket.status == 'OPEN' %}<span class="badge bg-danger">{{ ticket.status }}</span>{% endif %}
+                        {% if ticket.status in ['CLAIMED', 'IN_PROGRESS'] %}<span class="badge bg-warning text-dark">{{ ticket.status }}</span>{% endif %}
+                        {% if ticket.status == 'RESOLVED' %}<span class="badge bg-success">{{ ticket.status }}</span>{% endif %}
+                        {% if ticket.status == 'CLOSED' %}<span class="badge bg-secondary">{{ ticket.status }}</span>{% endif %}
+                        {% if ticket.status == 'ESCALATED' %}<span class="badge bg-dark">{{ ticket.status }}</span>{% endif %}
+                    </td>
+                    <td>{{ ticket.priority }}</td>
+                    <td>{{ ticket.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td><a href="{{ url_for('ticket_details', id=ticket.id) }}" class="btn btn-sm btn-outline-primary">View</a></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center text-muted py-4">You haven't submitted any tickets yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}

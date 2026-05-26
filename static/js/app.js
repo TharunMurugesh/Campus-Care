@@ -1,66 +1,45 @@
-// static/js/app.js
-"use strict";
-document.addEventListener("DOMContentLoaded", function () {
-    // 1. Clickable Rows for Tables
-    var rows = document.querySelectorAll(".clickable-row");
-    rows.forEach(function (row) {
-        row.addEventListener("click", function (e) {
-            // Prevent navigating if a button/form inside the row was clicked
-            if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
-                var href = row.getAttribute("data-href");
-                if (href) {
-                    window.location.href = href;
-                }
+// Simple JS for basic client-side validation
+document.addEventListener('DOMContentLoaded', () => {
+    
+    // File size and type validation for CSV
+    const csvForm = document.getElementById('csvForm');
+    const csvFile = document.getElementById('csvFile');
+
+    if (csvForm && csvFile) {
+        csvForm.addEventListener('submit', (e) => {
+            const file = csvFile.files[0];
+            if (!file) {
+                e.preventDefault();
+                csvFile.classList.add('is-invalid');
+                return;
             }
-        });
-    });
-    // 2. Claim Ticket Confirmation
-    var claimButtons = document.querySelectorAll(".confirm-claim");
-    claimButtons.forEach(function (btn) {
-        btn.addEventListener("click", function (e) {
-            if (confirm("Are you sure you want to claim this ticket? You will be fully responsible for its resolution.")) {
-                var form = btn.closest(".claim-form");
-                if (form)
-                    form.submit();
+            
+            // Check file type
+            if (file.type && file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+                e.preventDefault();
+                csvFile.classList.add('is-invalid');
+                alert('Please upload a valid CSV file.');
+                return;
             }
-        });
-    });
-    // 3. Dynamic Form Field Toggling for Status Update (Escalation Reason)
-    var statusSelect = document.querySelector(".status-select");
-    var escalationReasonField = document.getElementById("escalationReasonField");
-    if (statusSelect && escalationReasonField) {
-        statusSelect.addEventListener("change", function () {
-            if (statusSelect.value === "ESCALATED") {
-                escalationReasonField.style.display = "block";
-                var input = escalationReasonField.querySelector("input");
-                if (input)
-                    input.required = true;
+
+            // Check file size (max 5MB)
+            const maxSize = 5 * 1024 * 1024;
+            if (file.size > maxSize) {
+                e.preventDefault();
+                csvFile.classList.add('is-invalid');
+                alert('File size exceeds 5MB limit.');
+                return;
             }
-            else {
-                escalationReasonField.style.display = "none";
-                var input = escalationReasonField.querySelector("input");
-                if (input)
-                    input.required = false;
+
+            csvFile.classList.remove('is-invalid');
+            
+            // Show loading state
+            const btn = document.getElementById('uploadBtn');
+            if (btn) {
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Uploading...';
+                btn.disabled = true;
             }
         });
     }
-    // 4. Dynamic Form Field for User Registration (Role -> Department)
-    var roleSelect = document.getElementById("roleSelect");
-    var departmentField = document.getElementById("departmentField");
-    if (roleSelect && departmentField) {
-        roleSelect.addEventListener("change", function () {
-            if (roleSelect.value === "staff") {
-                departmentField.style.display = "block";
-                var select = departmentField.querySelector("select");
-                if (select)
-                    select.required = true;
-            }
-            else {
-                departmentField.style.display = "none";
-                var select = departmentField.querySelector("select");
-                if (select)
-                    select.required = false;
-            }
-        });
-    }
+
 });

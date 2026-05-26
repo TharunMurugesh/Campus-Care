@@ -1,39 +1,40 @@
-{% extends "base.html" %}
-
+{% extends 'base.html' %}
 {% block content %}
-<div class="mb-4">
-    <h2>My Claimed Tickets</h2>
-    <p class="text-muted">Tickets you are currently working on.</p>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>My Assigned Tickets</h2>
+    <a href="{{ url_for('department_queue') }}" class="btn btn-primary">View Department Queue</a>
 </div>
 
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Ticket Code</th>
-                        <th>Title</th>
-                        <th>Priority</th>
-                        <th>Status</th>
-                        <th>Last Updated</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for t in tickets %}
-                    <tr class="clickable-row" data-href="{{ url_for('ticket_details', id=t.id) }}">
-                        <td><strong>{{ t.ticket_code }}</strong></td>
-                        <td>{{ t.title }}</td>
-                        <td><span class="badge priority-{{ t.priority | lower }}">{{ t.priority }}</span></td>
-                        <td><span class="badge status-{{ t.status | lower }}">{{ t.status }}</span></td>
-                        <td><small class="text-muted">{{ t.updated_at.strftime('%b %d, %Y %H:%M') }}</small></td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="5" class="text-center py-4">You have no active claimed tickets.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Code</th>
+                    <th>Title</th>
+                    <th>Student</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Last Updated</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ticket in tickets %}
+                <tr>
+                    <td>{{ ticket.ticket_code }}</td>
+                    <td>{{ ticket.title }}</td>
+                    <td>{{ ticket.student_name }}</td>
+                    <td><span class="badge bg-secondary">{{ ticket.status }}</span></td>
+                    <td>{{ ticket.priority }}</td>
+                    <td>{{ ticket.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td><a href="{{ url_for('ticket_details', id=ticket.id) }}" class="btn btn-sm btn-outline-primary">Manage</a></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center text-muted py-4">You have no active tickets assigned.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}

@@ -1,65 +1,45 @@
-// static/js/app.ts
+// Simple TS for basic client-side validation
+document.addEventListener('DOMContentLoaded', () => {
+    
+    // File size and type validation for CSV
+    const csvForm = document.getElementById('csvForm') as HTMLFormElement;
+    const csvFile = document.getElementById('csvFile') as HTMLInputElement;
 
-document.addEventListener("DOMContentLoaded", () => {
-
-    // 1. Clickable Rows for Tables
-    const rows = document.querySelectorAll(".clickable-row") as NodeListOf<HTMLElement>;
-    rows.forEach(row => {
-        row.addEventListener("click", (e) => {
-            // Prevent navigating if a button/form inside the row was clicked
-            if ((e.target as HTMLElement).tagName !== 'BUTTON' && (e.target as HTMLElement).tagName !== 'A') {
-                const href = row.getAttribute("data-href");
-                if (href) {
-                    window.location.href = href;
-                }
+    if (csvForm && csvFile) {
+        csvForm.addEventListener('submit', (e) => {
+            const file = csvFile.files?.[0];
+            if (!file) {
+                e.preventDefault();
+                csvFile.classList.add('is-invalid');
+                return;
             }
-        });
-    });
-
-    // 2. Claim Ticket Confirmation
-    const claimButtons = document.querySelectorAll(".confirm-claim") as NodeListOf<HTMLButtonElement>;
-    claimButtons.forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            if (confirm("Are you sure you want to claim this ticket? You will be fully responsible for its resolution.")) {
-                const form = btn.closest(".claim-form") as HTMLFormElement;
-                if (form) form.submit();
+            
+            // Check file type
+            if (file.type && file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+                e.preventDefault();
+                csvFile.classList.add('is-invalid');
+                alert('Please upload a valid CSV file.');
+                return;
             }
-        });
-    });
 
-    // 3. Dynamic Form Field Toggling for Status Update (Escalation Reason)
-    const statusSelect = document.querySelector(".status-select") as HTMLSelectElement | null;
-    const escalationReasonField = document.getElementById("escalationReasonField") as HTMLElement | null;
+            // Check file size (max 5MB)
+            const maxSize = 5 * 1024 * 1024;
+            if (file.size > maxSize) {
+                e.preventDefault();
+                csvFile.classList.add('is-invalid');
+                alert('File size exceeds 5MB limit.');
+                return;
+            }
 
-    if (statusSelect && escalationReasonField) {
-        statusSelect.addEventListener("change", () => {
-            if (statusSelect.value === "ESCALATED") {
-                escalationReasonField.style.display = "block";
-                const input = escalationReasonField.querySelector("input") as HTMLInputElement;
-                if(input) input.required = true;
-            } else {
-                escalationReasonField.style.display = "none";
-                const input = escalationReasonField.querySelector("input") as HTMLInputElement;
-                if(input) input.required = false;
+            csvFile.classList.remove('is-invalid');
+            
+            // Show loading state
+            const btn = document.getElementById('uploadBtn') as HTMLButtonElement;
+            if (btn) {
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Uploading...';
+                btn.disabled = true;
             }
         });
     }
 
-    // 4. Dynamic Form Field for User Registration (Role -> Department)
-    const roleSelect = document.getElementById("roleSelect") as HTMLSelectElement | null;
-    const departmentField = document.getElementById("departmentField") as HTMLElement | null;
-
-    if (roleSelect && departmentField) {
-        roleSelect.addEventListener("change", () => {
-            if (roleSelect.value === "staff") {
-                departmentField.style.display = "block";
-                const select = departmentField.querySelector("select") as HTMLSelectElement;
-                if(select) select.required = true;
-            } else {
-                departmentField.style.display = "none";
-                const select = departmentField.querySelector("select") as HTMLSelectElement;
-                if(select) select.required = false;
-            }
-        });
-    }
 });
