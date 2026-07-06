@@ -1,5 +1,15 @@
 -- seed.sql
-
--- Initial database state is intentionally left empty.
--- Campuses must be created through the web UI registration flow.
--- Users and Departments will be created within those campuses.
+--
+-- The application is designed to be fully self-service from a clean
+-- slate, so no tenant data is seeded here. The only seeded record is
+-- the global superadmin, which is created interactively by:
+--
+--     sudo bash setup_db.sh
+--
+-- (that script calls seed_superadmin.py, which hashes the password with
+-- Werkzeug scrypt and writes only the hash to the users table under the
+-- sentinel campus id=0).
+--
+-- Do NOT add tenant/campus rows here — campuses must be created through
+-- the web UI registration flow so their codes & counters are generated
+-- correctly.
