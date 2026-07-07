@@ -46,7 +46,7 @@ app.jinja_env.globals["csrf_token"] = generate_csrf_token
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if "user_id" not in session and "campus_admin_id" not in session:
+        if "user_id" not in session:
             flash("Please log in to access this page.", "warning")
             return redirect(url_for("user_login"))
         return f(*args, **kwargs)
@@ -64,15 +64,6 @@ def role_required(roles):
             return f(*args, **kwargs)
         return decorated
     return decorator
-
-
-def superadmin_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if session.get("role") != "superadmin":
-            abort(403)
-        return f(*args, **kwargs)
-    return decorated
 
 
 def log_activity(ticket_id, action, user_id):
@@ -148,8 +139,6 @@ def index():
         return redirect(url_for("staff_dashboard"))
     if role == "campus_admin":
         return redirect(url_for("admin_dashboard"))
-    if role == "superadmin":
-        return redirect(url_for("superadmin_dashboard"))
     return redirect(url_for("user_login"))
 
 
@@ -247,30 +236,6 @@ def user_login():
     return render_template("user_login.html")
 
 
-@app.route("/superadmin/login", methods=["GET", "POST"])
-def superadmin_login():
-    if request.method == "POST":
-        email = request.form.get("email", "").strip()
-        password = request.form.get("password")
-
-        user = execute_query(
-            "SELECT * FROM users WHERE email = %s AND role = 'superadmin' AND is_active = TRUE",
-            (email,), fetch=True,
-        )
-        if user and check_password_hash(user["password_hash"], password):
-            session.clear()
-            session["_csrf_token"] = secrets.token_hex(32)
-            session["user_id"] = user["id"]
-            session["campus_id"] = None
-            session["campus_name"] = "Super Admin"
-            session["role"] = "superadmin"
-            session["name"] = user["name"]
-            flash(f"Welcome, {user['name']}.", "success")
-            return redirect(url_for("superadmin_dashboard"))
-        flash("Invalid superadmin credentials.", "danger")
-    return render_template("superadmin_login.html")
-
-
 @app.route("/logout", methods=["POST"])
 def logout():
     session.clear()
@@ -351,7 +316,7 @@ def department_queue():
 
 @app.route("/admin/dashboard")
 @login_required
-@role_required(["campus_admin", "superadmin"])
+@role_required("campus_admin")
 def admin_dashboard():
     campus_id = session["campus_id"]
     refresh_stats(campus_id)
@@ -456,7 +421,7 @@ def ticket_details(id):
     )
 
     staff_members = []
-    if role in ("campus_admin", "superadmin"):
+    if role == "campus_admin":
         staff_members = execute_query(
             "SELECT id, name FROM users WHERE role = 'staff' AND department_id = %s AND campus_id = %s AND is_active = TRUE ORDER BY name",
             (ticket["department_id"], campus_id), fetch=True, fetchall=True,
@@ -559,7 +524,7 @@ def add_comment(id):
 
 @app.route("/admin/users")
 @login_required
-@role_required(["campus_admin", "superadmin"])
+@role_required("campus_admin")
 def manage_users():
     campus_id = session["campus_id"]
     q, search_clause, search_params = search_filter(["u.name", "u.email", "u.university_id"])
@@ -582,7 +547,7 @@ def manage_users():
 
 @app.route("/admin/users/add", methods=["POST"])
 @login_required
-@role_required(["campus_admin", "superadmin"])
+@role_required("campus_admin")
 def add_user():
     campus_id = session["campus_id"]
     name = request.form.get("name", "").strip()
@@ -617,7 +582,7 @@ def add_user():
 
 @app.route("/admin/users/<int:id>/toggle", methods=["POST"])
 @login_required
-@role_required(["campus_admin", "superadmin"])
+@role_required("campus_admin")
 def toggle_user(id):
     campus_id = session["campus_id"]
     user = execute_query("SELECT * FROM users WHERE id = %s AND campus_id = %s", (id, campus_id), fetch=True)
@@ -634,7 +599,7 @@ def toggle_user(id):
 
 @app.route("/admin/departments", methods=["GET", "POST"])
 @login_required
-@role_required(["campus_admin", "superadmin"])
+@role_required("campus_admin")
 def manage_departments():
     campus_id = session["campus_id"]
 
@@ -659,7 +624,7 @@ def manage_departments():
 
 @app.route("/admin/departments/<int:id>/delete", methods=["POST"])
 @login_required
-@role_required(["campus_admin", "superadmin"])
+@role_required("campus_admin")
 def delete_department(id):
     campus_id = session["campus_id"]
     open_count = execute_query(
@@ -680,7 +645,7 @@ def delete_department(id):
 
 @app.route("/admin/users/bulk-upload", methods=["POST"])
 @login_required
-@role_required(["campus_admin", "superadmin"])
+@role_required("campus_admin")
 def bulk_upload_users():
     campus_id = session["campus_id"]
     user_id = session["user_id"]
@@ -747,85 +712,6 @@ def bulk_upload_users():
 def health():
     from db import health_check
     return ("OK", 200) if health_check() else ("DB unavailable", 503)
-
-
-@app.route("/superadmin")
-@app.route("/superadmin/dashboard")
-@login_required
-@superadmin_required
-def superadmin_dashboard():
-    refresh_stats()
-    stats = execute_query(
-        "SELECT "
-        "(SELECT COUNT(*) FROM campuses WHERE is_active = TRUE) AS total_campuses, "
-        "(SELECT COUNT(*) FROM users WHERE role IN ('student','staff')) AS total_users, "
-        "(SELECT COUNT(*) FROM tickets) AS total_tickets, "
-        "(SELECT COUNT(*) FROM tickets WHERE status = 'OPEN') AS open_tickets, "
-        "(SELECT COUNT(*) FROM tickets WHERE status IN ('CLAIMED','IN_PROGRESS')) AS in_progress, "
-        "(SELECT COUNT(*) FROM tickets WHERE status = 'ESCALATED') AS escalated, "
-        "(SELECT COUNT(*) FROM tickets WHERE status = 'RESOLVED') AS resolved, "
-        "(SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)) / 3600), 0)::NUMERIC(10,2) "
-        " FROM tickets WHERE resolved_at IS NOT NULL) AS avg_resolve_hrs",
-        fetch=True,
-    )
-    campus_breakdown = execute_query(
-        """
-        SELECT c.id, c.campus_name,
-               COALESCE(s.total_tickets, 0) AS total_tickets,
-               COALESCE(s.open_tickets, 0) AS open_tickets,
-               COALESCE(s.resolved, 0) AS resolved_tickets,
-               COALESCE(s.escalated, 0) AS escalated,
-               COALESCE(s.avg_resolve_hrs, 0) AS avg_resolve_hrs
-        FROM campuses c
-        LEFT JOIN campus_stats s ON s.campus_id = c.id
-        WHERE c.is_active = TRUE
-        """,
-        fetch=True, fetchall=True,
-    )
-    dept_breakdown = execute_query(
-        """
-        SELECT d.name AS department_name, c.campus_name,
-               COUNT(t.id) AS total_tickets,
-               COUNT(t.id) FILTER (WHERE t.status = 'OPEN') AS open_tickets,
-               COUNT(t.id) FILTER (WHERE t.status = 'RESOLVED') AS resolved
-        FROM departments d
-        JOIN campuses c ON d.campus_id = c.id
-        LEFT JOIN tickets t ON t.department_id = d.id AND t.campus_id = c.id
-        WHERE c.is_active = TRUE
-        GROUP BY d.id, d.name, c.campus_name
-        HAVING COUNT(t.id) > 0
-        ORDER BY total_tickets DESC
-        LIMIT 20
-        """,
-        fetch=True, fetchall=True,
-    )
-    top_staff = execute_query(
-        """
-        SELECT u.name, c.campus_name,
-               COUNT(t.id) FILTER (WHERE t.status = 'RESOLVED') AS resolved,
-               COUNT(t.id) FILTER (WHERE t.status IN ('OPEN','CLAIMED','IN_PROGRESS')) AS active,
-               COUNT(t.id) AS total_assigned
-        FROM users u
-        JOIN campuses c ON u.campus_id = c.id
-        LEFT JOIN tickets t ON t.assigned_to = u.id
-        WHERE u.role = 'staff' AND c.is_active = TRUE
-        GROUP BY u.id, u.name, c.campus_name
-        HAVING COUNT(t.id) > 0
-        ORDER BY resolved DESC
-        LIMIT 10
-        """,
-        fetch=True, fetchall=True,
-    )
-
-    sort_col, sort_dir = parse_sort("tickets", {"tickets": "total_tickets", "open": "open_tickets", "resolved": "resolved_tickets", "name": "campus_name"})
-    campus_breakdown = sorted(campus_breakdown, key=lambda r: r[sort_col] if r[sort_col] is not None else 0, reverse=(sort_dir == "DESC"))
-
-    return render_template(
-        "superadmin_dashboard.html",
-        stats=stats, campus_breakdown=campus_breakdown,
-        dept_breakdown=dept_breakdown, top_staff=top_staff,
-        sort=sort_col, dir=sort_dir,
-    )
 
 
 if __name__ == "__main__":

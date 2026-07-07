@@ -1,45 +1,22 @@
-// Simple JS for basic client-side validation
-document.addEventListener('DOMContentLoaded', () => {
-    
-    // File size and type validation for CSV
-    const csvForm = document.getElementById('csvForm');
-    const csvFile = document.getElementById('csvFile');
+const e = React.createElement;
 
-    if (csvForm && csvFile) {
-        csvForm.addEventListener('submit', (e) => {
-            const file = csvFile.files[0];
-            if (!file) {
-                e.preventDefault();
-                csvFile.classList.add('is-invalid');
-                return;
-            }
-            
-            // Check file type
-            if (file.type && file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-                e.preventDefault();
-                csvFile.classList.add('is-invalid');
-                alert('Please upload a valid CSV file.');
-                return;
-            }
+function HeroBanner() {
+  return e(
+    'section',
+    { className: 'hero-banner shadow-lg rounded-4 p-4 mb-4' },
+    e('div', { className: 'hero-copy' },
+      e('p', { className: 'eyebrow text-uppercase mb-2 text-primary' }, 'CampusCare'),
+      e('h1', { className: 'display-6 fw-bold mb-3' }, 'Professional campus issue tracking'),
+      e('p', { className: 'lead text-muted mb-0' }, 'A polished blue, marine and white theme for students, staff, and campus administrators.')
+    )
+  );
+}
 
-            // Check file size (max 5MB)
-            const maxSize = 5 * 1024 * 1024;
-            if (file.size > maxSize) {
-                e.preventDefault();
-                csvFile.classList.add('is-invalid');
-                alert('File size exceeds 5MB limit.');
-                return;
-            }
+function App() {
+  return e('div', null, e(HeroBanner));
+}
 
-            csvFile.classList.remove('is-invalid');
-            
-            // Show loading state
-            const btn = document.getElementById('uploadBtn');
-            if (btn) {
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Uploading...';
-                btn.disabled = true;
-            }
-        });
-    }
-
-});
+const root = document.getElementById('react-shell');
+if (root) {
+  ReactDOM.createRoot(root).render(e(App));
+}

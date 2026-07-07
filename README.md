@@ -6,11 +6,10 @@ Multi-tenant issue reporting and ticketing system for universities and instituti
 
 - Multi-campus isolation with unique campus codes
 - Campus admin self-service onboarding
-- Role-based access: student, staff, campus admin, super admin
+- Role-based access: student, staff, campus admin
 - Ticket lifecycle: create → claim → resolve → close (with escalation)
 - Department-wise routing and queue management
 - Bulk user import via CSV
-- Global super admin analytics with per-campus and per-department breakdowns
 - Paginated, searchable, sortable views across all dashboards
 - Connection pooling and stats caching for performance
 - CSRF protection and scrypt password hashing
@@ -31,18 +30,7 @@ The app runs at http://localhost:5000.
 
 ```bash
 sudo bash setup_db.sh
-# follow the prompts to create the super admin
 
-source venv/bin/activate
-pip install -r requirements.txt
-python app.py
-```
-
-The app runs at http://127.0.0.1:5000.
-
-For hot-reload with Docker:
-
-```bash
 docker compose -f docker-compose.dev.yml up --build
 ```
 
@@ -54,7 +42,7 @@ docker compose -f docker-compose.dev.yml up --build
 4. **Add users** (manually or via bulk CSV import).
 5. **Students** log in at `/login` to create and track tickets.
 6. **Staff** log in at `/login` to claim and resolve tickets from their department queue.
-7. **Super admin** logs in at `/superadmin/login` for cross-campus analytics.
+7. **Campus admin** logs in at `/campus/login` for campus-wide administration.
 
 ## Tech Stack
 
@@ -72,7 +60,6 @@ app.py                  # Flask application and all routes
 db.py                   # Connection pool, pagination, caching
 wsgi.py                 # Gunicorn entry point
 schema.sql              # Database schema (sequences, indexes, triggers, rollups)
-seed_superadmin.py      # Interactive super admin seeder
 setup_db.sh             # One-time database bootstrap script
 db/partitioning_migration.sql  # Optional ticket partitioning (for high volume)
 Dockerfile
@@ -98,15 +85,6 @@ All config is through `.env`:
 | DB_POOL_MIN | 2 | Min connection pool size |
 | DB_POOL_MAX | 10 | Max connection pool size |
 | SESSION_COOKIE_SECURE | 0 | Set to 1 in production with HTTPS |
-
-## Super Admin
-
-The super admin account is created during `setup_db.sh`. It has cross-campus access to all analytics:
-
-- Global KPIs (total campuses, users, tickets, resolution times)
-- Per-campus breakdown (sortable)
-- Department load analysis (top 20)
-- Top performing staff
 
 ## Database Scaling
 

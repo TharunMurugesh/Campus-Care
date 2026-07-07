@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# One-time database bootstrap for CampusCare.
+#
+# Usage:  sudo bash setup_db.sh
+#
+# Designed to recover gracefully if a previous run partially completed
+# (e.g. role + DB created but schema load or seeder failed).
 set -euo pipefail
 
 DB_NAME="${DB_NAME:-campus_issue_system}"
@@ -17,8 +23,7 @@ fi
 
 command -v psql >/dev/null 2>&1 || { red "psql not found."; exit 1; }
 command -v python3 >/dev/null 2>&1 || command -v python >/dev/null 2>&1 || { red "python not found."; exit 1; }
-[[ -f "$SCRIPT_DIR/schema.sql" ]]         || { red "schema.sql missing."; exit 1; }
-[[ -f "$SCRIPT_DIR/seed_superadmin.py" ]] || { red "seed_superadmin.py missing."; exit 1; }
+[[ -f "$SCRIPT_DIR/schema.sql" ]] || { red "schema.sql missing."; exit 1; }
 
 PY=python3
 command -v "$PY" >/dev/null 2>&1 || PY=python
@@ -30,45 +35,48 @@ echo    "    Role     : $DB_USER"
 echo    "    Repo user: $REAL_USER"
 echo
 
-read -r -p "This will DROP and recreate '$DB_NAME' and role '$DB_USER'. Continue? [y/N] " ans
-case "$ans" in
-  y|Y) ;;
-  *) yellow "Aborted."; exit 0 ;;
-esac
+# ---- Detect prior partial run -----------------------------------------------
+ROLE_EXISTS=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | tr -d '[:space:]')
+DB_EXISTS=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | tr -d '[:space:]')
+TABLE_COUNT=0
+if [[ "$DB_EXISTS" == "1" ]]; then
+  TABLE_COUNT=$(sudo -u postgres psql -d "$DB_NAME" -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'" 2>/dev/null | tr -d '[:space:]' || echo 0)
+fi
 
+echo "    Role exists        : ${ROLE_EXISTS:-no}"
+echo "    Database exists    : ${DB_EXISTS:-no}"
+echo "    Tables loaded      : $TABLE_COUNT"
+echo
+
+# Always (re)set the app password — this is the only thing that strictly
+# needs sudo, because tm lacks CREATEROLE.
 APP_PASSWORD="$(rand_str 24)"
 [[ -n "$APP_PASSWORD" ]] || { red "password generation failed."; exit 1; }
 
-green "==> Creating role '$DB_USER'"
-sudo -u postgres psql -v ON_ERROR_STOP=1 <<SQL
-DO \$\$
-BEGIN
-   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '$DB_USER') THEN
-      CREATE ROLE $DB_USER LOGIN PASSWORD '$APP_PASSWORD';
-   ELSE
-      ALTER ROLE $DB_USER LOGIN PASSWORD '$APP_PASSWORD';
-   END IF;
-END\$\$;
-SQL
+if [[ "$ROLE_EXISTS" == "1" ]]; then
+  green "==> Resetting password for existing role '$DB_USER'"
+  sudo -u postgres psql -v ON_ERROR_STOP=1 -c "ALTER ROLE $DB_USER WITH LOGIN PASSWORD '$APP_PASSWORD';"
+else
+  green "==> Creating role '$DB_USER'"
+  sudo -u postgres psql -v ON_ERROR_STOP=1 -c "CREATE ROLE $DB_USER LOGIN PASSWORD '$APP_PASSWORD';"
+  DB_EXISTS=no
+fi
 
-green "==> Recreating database '$DB_NAME'"
-sudo -u postgres dropdb --if-exists "$DB_NAME"
-sudo -u postgres createdb -O "$DB_USER" "$DB_NAME"
+# ---- Database + schema ------------------------------------------------------
+if [[ "$DB_EXISTS" != "1" ]]; then
+  green "==> Creating database '$DB_NAME'"
+  sudo -u postgres createdb -O "$DB_USER" "$DB_NAME"
+  TABLE_COUNT=0
+fi
 
+# Schema loads are idempotent (schema.sql drops & recreates everything).
+# We load as $DB_USER over TCP so the postgres OS user doesn't need to read
+# files inside the (700-mode) home directory — fixes the WSL permission error.
 green "==> Loading schema.sql as $DB_USER (over TCP)"
 PGPASSWORD="$APP_PASSWORD" psql -h 127.0.0.1 -p 5432 -U "$DB_USER" -d "$DB_NAME" \
   -v ON_ERROR_STOP=1 -f "$SCRIPT_DIR/schema.sql"
 
-green "==> Seeding superadmin (as $REAL_USER)"
-if [[ -x "$SCRIPT_DIR/venv/bin/python" ]]; then
-  SEED_PY="$SCRIPT_DIR/venv/bin/python"
-else
-  SEED_PY="$PY"
-fi
-sudo -u "$REAL_USER" env \
-  PGHOST=127.0.0.1 PGPORT=5432 PGUSER="$DB_USER" PGPASSWORD="$APP_PASSWORD" PGDATABASE="$DB_NAME" \
-  PYTHONPATH="$SCRIPT_DIR" "$SEED_PY" "$SCRIPT_DIR/seed_superadmin.py"
-
+# ---- Write .env ------------------------------------------------------------
 ENV_FILE="$SCRIPT_DIR/.env"
 SECRET_KEY="$("$PY" -c 'import secrets;print(secrets.token_hex(32))')"
 [[ -n "$SECRET_KEY" ]] || SECRET_KEY="$(date +%s | sha256sum | head -c 64)"
@@ -90,7 +98,7 @@ chown "$REAL_USER" "$ENV_FILE" 2>/dev/null || true
 
 echo
 green "==> Done."
-echo    "    Database : $DB_NAME"
+echo    "    Database : $DB_NAME (schema loaded)"
 echo    "    App role : $DB_USER (password written to .env)"
 echo    "    .env     : regenerated"
 echo
@@ -99,4 +107,3 @@ echo    "    source venv/bin/activate"
 echo    "    pip install -r requirements.txt"
 echo    "    python app.py   ->  http://127.0.0.1:5000"
 echo
-yellow "Superadmin login: http://127.0.0.1:5000/superadmin/login"

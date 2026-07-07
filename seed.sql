@@ -1,3 +1,1 @@
 -- No tenant data is seeded; campuses are created through the web UI.
--- The global superadmin is created interactively by setup_db.sh
--- (which runs seed_superadmin.py).
