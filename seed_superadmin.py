@@ -1,4 +1,5 @@
 import getpass
+import os
 import sys
 
 import psycopg2
@@ -35,15 +36,21 @@ def prompt_credentials():
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: seed_superadmin.py <db_name>", file=sys.stderr)
-        sys.exit(1)
-    db_name = sys.argv[1]
+    if len(sys.argv) > 1:
+        dbname = sys.argv[1]
+    else:
+        dbname = os.environ.get("PGDATABASE", "campus_issue_system")
 
     email, name, pw = prompt_credentials()
     pw_hash = generate_password_hash(pw)
 
-    conn = psycopg2.connect(dbname=db_name, user="postgres")
+    conn = psycopg2.connect(
+        host=os.environ.get("PGHOST", "127.0.0.1"),
+        port=os.environ.get("PGPORT", "5432"),
+        dbname=dbname,
+        user=os.environ.get("PGUSER", "campus_app"),
+        password=os.environ.get("PGPASSWORD"),
+    )
     try:
         with conn:
             with conn.cursor() as cur:
