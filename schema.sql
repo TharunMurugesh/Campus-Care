@@ -1,28 +1,5 @@
--- =====================================================================
--- CampusCare schema — production-grade, multi-tenant, scale-ready
--- =====================================================================
--- What this gives you vs. the original schema:
---   * Dedicated SEQUENCE + per-campus counters for ticket codes
---     (atomic, race-free; was SELECT count(*)).
---   * updated_at maintained automatically by a trigger (was stale).
---   * Composite + partial indexes matched to the real query patterns.
---   * `campus_stats` rollup table + refresh function so dashboards read
---     pre-aggregated rows instead of COUNT(*) over the whole table.
---   * A sentinel campus (id=0) anchoring global superadmin accounts,
---     keeping the users.campus_id FK valid without polluting tenants.
---
--- Partitioning: `tickets` is intentionally a plain table so that the
--- FKs from comments/activity_logs/import_jobs keep working unchanged.
--- When (and only when) ticket volume justifies it, apply
--- db/partitioning_migration.sql — it converts tickets to a monthly
--- range-partitioned table. That path is documented and ready.
--- =====================================================================
-
 BEGIN;
 
--- ---------------------------------------------------------------------
--- 0. Clean slate
--- ---------------------------------------------------------------------
 DROP TABLE IF EXISTS activity_logs CASCADE;
 DROP TABLE IF EXISTS comments CASCADE;
 DROP TABLE IF EXISTS import_jobs CASCADE;
@@ -36,10 +13,6 @@ DROP FUNCTION IF EXISTS touch_updated_at() CASCADE;
 DROP FUNCTION IF EXISTS refresh_campus_stats(integer) CASCADE;
 DROP SEQUENCE IF EXISTS campus_code_seq;
 
--- ---------------------------------------------------------------------
--- 1. Sequences & base tables
--- ---------------------------------------------------------------------
--- Global sequence for the per-year campus code suffix (CCYYYYNNNN).
 CREATE SEQUENCE campus_code_seq START 1;
 
 CREATE TABLE campuses (
@@ -52,9 +25,6 @@ CREATE TABLE campuses (
     created_at           TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Per-campus monotonically increasing ticket number. Using a real row
--- with a counter (instead of SELECT count(*)) makes ticket-code
--- generation atomic and race-free via UPDATE ... RETURNING.
 CREATE TABLE campus_counters (
     campus_id  INTEGER PRIMARY KEY REFERENCES campuses(id) ON DELETE CASCADE,
     ticket_seq INTEGER NOT NULL DEFAULT 0
@@ -138,9 +108,6 @@ CREATE TABLE import_jobs (
     created_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- ---------------------------------------------------------------------
--- 2. Indexes (composite + partial, matched to real query patterns)
--- ---------------------------------------------------------------------
 CREATE INDEX idx_tickets_campus_status      ON tickets(campus_id, status);
 CREATE INDEX idx_tickets_campus_dept_status ON tickets(campus_id, department_id, status);
 CREATE INDEX idx_tickets_assigned_status    ON tickets(assigned_to, status)
@@ -154,9 +121,6 @@ CREATE INDEX idx_comments_ticket_created     ON comments(ticket_id, created_at);
 CREATE INDEX idx_activity_ticket_created     ON activity_logs(ticket_id, created_at DESC);
 CREATE INDEX idx_import_jobs_campus          ON import_jobs(campus_id, created_at DESC);
 
--- ---------------------------------------------------------------------
--- 3. Trigger: keep tickets.updated_at fresh
--- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION touch_updated_at()
 RETURNS trigger AS $$
 BEGIN
@@ -169,13 +133,6 @@ CREATE TRIGGER trg_tickets_touch_updated
     BEFORE UPDATE ON tickets
     FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
 
--- ---------------------------------------------------------------------
--- 4. Dashboard rollups: campus_stats + refresh function
--- ---------------------------------------------------------------------
--- One row per campus summarising ticket state. Refreshed on demand and
--- read by dashboards so they avoid COUNT(*) over the whole table on
--- every page load. The app calls refresh_campus_stats(campus_id) after
--- ticket state changes (cheap; runs in a single aggregate query).
 CREATE TABLE campus_stats (
     campus_id       INTEGER PRIMARY KEY REFERENCES campuses(id) ON DELETE CASCADE,
     total_tickets   INTEGER NOT NULL DEFAULT 0,
@@ -222,17 +179,11 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- ---------------------------------------------------------------------
--- 5. Sentinel campus (id=0) anchoring global superadmin accounts
--- ---------------------------------------------------------------------
--- Keeps users.campus_id FK satisfied for superadmins without polluting
--- any real tenant. Marked inactive so it never shows in analytics.
 INSERT INTO campuses (id, campus_code, campus_name, official_domain,
                       campus_password_hash, is_active)
 VALUES (0, 'CC-SUPER', 'System (Super Admin)', 'system.local', 'x', FALSE)
 ON CONFLICT (id) DO NOTHING;
 
--- Reset the SERIAL sequence so user-created campuses start at id=1.
 SELECT setval(pg_get_serial_sequence('campuses','id'), 1, false);
 
 COMMIT;
