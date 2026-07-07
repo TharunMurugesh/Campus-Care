@@ -1,40 +1,46 @@
 {% extends 'base.html' %}
+{% from '_macros.html' import search_box, sort_header, pagination_controls %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>My Assigned Tickets</h2>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">My Assigned Tickets</h2>
     <a href="{{ url_for('department_queue') }}" class="btn btn-primary">View Department Queue</a>
 </div>
 
+{{ search_box(q, '<input type="hidden" name="status" value="' ~ (status or '') ~ '">') }}
+
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Code</th>
-                    <th>Title</th>
-                    <th>Student</th>
-                    <th>Status</th>
-                    <th>Priority</th>
-                    <th>Last Updated</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for ticket in tickets %}
-                <tr>
-                    <td>{{ ticket.ticket_code }}</td>
-                    <td>{{ ticket.title }}</td>
-                    <td>{{ ticket.student_name }}</td>
-                    <td><span class="badge bg-secondary">{{ ticket.status }}</span></td>
-                    <td>{{ ticket.priority }}</td>
-                    <td>{{ ticket.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                    <td><a href="{{ url_for('ticket_details', id=ticket.id) }}" class="btn btn-sm btn-outline-primary">Manage</a></td>
-                </tr>
-                {% else %}
-                <tr><td colspan="7" class="text-center text-muted py-4">You have no active tickets assigned.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>{{ sort_header('Code', 'code', sort, dir) }}</th>
+                        <th>{{ sort_header('Title', 'title', sort, dir) }}</th>
+                        <th>{{ sort_header('Student', 'student', sort, dir) }}</th>
+                        <th>{{ sort_header('Status', 'status', sort, dir) }}</th>
+                        <th>{{ sort_header('Priority', 'priority', sort, dir) }}</th>
+                        <th>{{ sort_header('Updated', 'updated', sort, dir) }}</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ticket in pager.rows %}
+                    <tr>
+                        <td><code>{{ ticket.ticket_code }}</code></td>
+                        <td>{{ ticket.title }}</td>
+                        <td>{{ ticket.student_name }}</td>
+                        <td><span class="badge bg-secondary">{{ ticket.status }}</span></td>
+                        <td>{{ ticket.priority }}</td>
+                        <td><small>{{ ticket.updated_at.strftime('%Y-%m-%d %H:%M') }}</small></td>
+                        <td><a href="{{ url_for('ticket_details', id=ticket.id) }}" class="btn btn-sm btn-outline-primary">Manage</a></td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">You have no active tickets assigned.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
+{{ pagination_controls(pager, '&q=' ~ (q or '') ~ '&status=' ~ (status or '') ~ '&sort=' ~ (sort or '') ~ '&dir=' ~ (dir or '')) }}
 {% endblock %}

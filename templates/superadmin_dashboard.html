@@ -1,75 +1,174 @@
-{% extends "base.html" %}
-
+{% extends 'base.html' %}
+{% from '_macros.html' import sort_header %}
 {% block content %}
-<div class="mb-4">
-    <h2>Super Admin Dashboard</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-0">Super Admin Analytics</h2>
+        <small class="text-muted">System-wide view across all campuses</small>
+    </div>
+    <span class="badge bg-dark">GLOBAL</span>
 </div>
 
 <div class="row mb-4">
-    <div class="col-md-3 mb-3">
+    <div class="col-6 col-md-3 mb-3">
         <div class="card text-center shadow-sm border-0 h-100">
             <div class="card-body">
-                <h1 class="display-4 text-primary">{{ stats.total }}</h1>
-                <p class="text-muted mb-0">Total Tickets</p>
+                <h1 class="display-6 text-primary">{{ stats.total_campuses }}</h1>
+                <p class="text-muted mb-0 small">Campuses</p>
             </div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
+    <div class="col-6 col-md-3 mb-3">
         <div class="card text-center shadow-sm border-0 h-100">
             <div class="card-body">
-                <h1 class="display-4 text-warning">{{ stats.open }}</h1>
-                <p class="text-muted mb-0">Open Unclaimed</p>
+                <h1 class="display-6 text-secondary">{{ stats.total_users }}</h1>
+                <p class="text-muted mb-0 small">Users</p>
             </div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
+    <div class="col-6 col-md-3 mb-3">
         <div class="card text-center shadow-sm border-0 h-100">
             <div class="card-body">
-                <h1 class="display-4 text-info">{{ stats.in_progress }}</h1>
-                <p class="text-muted mb-0">In Progress</p>
+                <h1 class="display-6 text-info">{{ stats.total_tickets }}</h1>
+                <p class="text-muted mb-0 small">Total Tickets</p>
             </div>
         </div>
     </div>
-    <div class="col-md-3 mb-3">
+    <div class="col-6 col-md-3 mb-3">
         <div class="card text-center shadow-sm border-0 h-100">
             <div class="card-body">
-                <h1 class="display-4 text-danger">{{ stats.escalated }}</h1>
-                <p class="text-muted mb-0">Escalated</p>
+                <h1 class="display-6 text-warning">{{ stats.avg_resolve_hrs }}</h1>
+                <p class="text-muted mb-0 small">Avg Resolve (hrs)</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3 mb-3">
+        <div class="card text-center shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h1 class="display-6 text-danger">{{ stats.open_tickets }}</h1>
+                <p class="text-muted mb-0 small">Open</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3 mb-3">
+        <div class="card text-center shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h1 class="display-6 text-info">{{ stats.in_progress }}</h1>
+                <p class="text-muted mb-0 small">In Progress</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3 mb-3">
+        <div class="card text-center shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h1 class="display-6 text-dark">{{ stats.escalated }}</h1>
+                <p class="text-muted mb-0 small">Escalated</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3 mb-3">
+        <div class="card text-center shadow-sm border-0 h-100">
+            <div class="card-body">
+                <h1 class="display-6 text-success">{{ stats.resolved }}</h1>
+                <p class="text-muted mb-0 small">Resolved</p>
             </div>
         </div>
     </div>
 </div>
 
-<div class="card shadow-sm border-0">
-    <div class="card-header bg-white pb-0 pt-4 border-0">
-        <h5>Recent Tickets (System Wide)</h5>
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0">Per-Campus Breakdown</h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
+            <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Ticket</th>
-                        <th>Student</th>
-                        <th>Department</th>
-                        <th>Status</th>
-                        <th>Created</th>
+                        <th>{{ sort_header('Campus', 'name', sort, dir) }}</th>
+                        <th>{{ sort_header('Total', 'tickets', sort, dir) }}</th>
+                        <th>{{ sort_header('Open', 'open', sort, dir) }}</th>
+                        <th>{{ sort_header('Resolved', 'resolved', sort, dir) }}</th>
+                        <th>Escalated</th>
+                        <th>Avg Resolve (hrs)</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for t in tickets %}
-                    <tr class="clickable-row" data-href="{{ url_for('ticket_details', id=t.id) }}">
-                        <td><strong>{{ t.ticket_code }}</strong></td>
-                        <td>{{ t.student_name }}</td>
-                        <td>{{ t.department_name }}</td>
-                        <td><span class="badge status-{{ t.status | lower }}">{{ t.status }}</span></td>
-                        <td><small class="text-muted">{{ t.created_at.strftime('%b %d, %Y') }}</small></td>
+                    {% for c in campus_breakdown %}
+                    <tr>
+                        <td><strong>{{ c.campus_name }}</strong></td>
+                        <td>{{ c.total_tickets }}</td>
+                        <td><span class="badge bg-danger rounded-pill">{{ c.open_tickets }}</span></td>
+                        <td><span class="badge bg-success rounded-pill">{{ c.resolved_tickets }}</span></td>
+                        <td><span class="badge bg-dark rounded-pill">{{ c.escalated }}</span></td>
+                        <td>{{ c.avg_resolve_hrs }}</td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="5" class="text-center py-4">No tickets in the system.</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted py-4">No campuses yet.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0">Department Load (Top 20)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr><th>Department</th><th>Campus</th><th>Total</th><th>Open</th><th>Resolved</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for d in dept_breakdown %}
+                            <tr>
+                                <td>{{ d.department_name }}</td>
+                                <td><small class="text-muted">{{ d.campus_name }}</small></td>
+                                <td>{{ d.total_tickets }}</td>
+                                <td>{{ d.open_tickets }}</td>
+                                <td>{{ d.resolved }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center text-muted py-4">No data.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0">Top Performing Staff</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr><th>Staff</th><th>Campus</th><th>Resolved</th><th>Active</th><th>Total</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for s in top_staff %}
+                            <tr>
+                                <td><strong>{{ s.name }}</strong></td>
+                                <td><small class="text-muted">{{ s.campus_name }}</small></td>
+                                <td><span class="badge bg-success rounded-pill">{{ s.resolved }}</span></td>
+                                <td>{{ s.active }}</td>
+                                <td>{{ s.total_assigned }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="text-center text-muted py-4">No data.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
