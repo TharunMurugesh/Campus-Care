@@ -1,32 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap');
+
 :root {
-    --nav-bg: #061a40;
-    --surface: #0f234d;
-    --surface-soft: #142b58;
-    --accent: #25a2d4;
-    --accent-dark: #0c5c7a;
-    --text: #f8fbff;
-    --text-muted: #d1dae7;
-    --card: #112a54;
+    --nav-bg: #2b3a42;
+    --surface: #ffffff;
+    --surface-soft: #f4f6f8;
+    --accent: #0066cc;
+    --accent-dark: #004c99;
+    --text: #333333;
+    --text-muted: #666666;
+    --card: #ffffff;
 }
 
 body {
     min-height: 100vh;
-    background: radial-gradient(circle at top left, rgba(37, 162, 212, 0.18), transparent 30%),
-                linear-gradient(180deg, #08172f 0%, #03101f 100%);
+    background-color: var(--surface-soft);
     color: var(--text);
-    font-family: 'Google Sans', 'Inter', sans-serif;
+    font-family: 'Google Sans', 'Noto Sans', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
 a, .nav-link {
-    color: var(--text);
+    color: var(--accent);
 }
 
 .navbar {
-    background: linear-gradient(135deg, #071531 0%, #09234e 100%);
+    background-color: var(--nav-bg) !important;
 }
 
 .navbar-brand {
-    letter-spacing: 0.08em;
+    letter-spacing: 0.5px;
 }
 
 .navbar-nav .nav-link {
@@ -36,47 +37,28 @@ a, .nav-link {
 .btn-primary {
     background-color: var(--accent);
     border-color: var(--accent);
-    box-shadow: 0 12px 30px rgba(2, 79, 121, 0.16);
+    box-shadow: 0 2px 4px rgba(0, 102, 204, 0.2);
 }
 
 .btn-primary:hover, .btn-primary:focus {
-    background-color: #1d94c0;
-    border-color: #1d94c0;
+    background-color: var(--accent-dark);
+    border-color: var(--accent-dark);
 }
 
 .card {
-    background: rgba(12,34,72,0.94);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: var(--card);
+    border: 1px solid #e0e0e0;
     color: var(--text);
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
 .card .card-body {
     background: transparent;
 }
 
-.hero-banner {
-    background: linear-gradient(135deg, rgba(37,162,212,0.18), rgba(255,255,255,0.04));
-    border: 1px solid rgba(255,255,255,0.08);
-}
-
-.hero-copy .eyebrow {
-    color: var(--accent);
-    font-weight: 700;
-    letter-spacing: 0.18em;
-}
-
-.hero-copy h1 {
-    color: #ffffff;
-}
-
-.hero-copy p {
-    color: var(--text-muted);
-}
-
 .alert {
-    background: rgba(255,255,255,0.1);
-    border-color: rgba(255,255,255,0.12);
-    color: var(--text);
+    border-radius: 6px;
 }
 
 .table {
@@ -84,37 +66,37 @@ a, .nav-link {
 }
 
 .table thead th {
-    border-bottom: 1px solid rgba(255,255,255,0.12);
+    border-bottom: 2px solid #e0e0e0;
     color: var(--text-muted);
 }
 
 .table tbody tr {
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    border-bottom: 1px solid #f0f0f0;
 }
 
 .table tbody tr:hover {
-    background: rgba(255,255,255,0.04);
+    background: #f9f9f9;
 }
 
 .form-control,
 .form-select {
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.12);
+    background: #ffffff;
+    border: 1px solid #cccccc;
     color: var(--text);
 }
 
 .form-control:focus,
 .form-select:focus {
-    border-color: rgba(37,162,212,0.6);
-    box-shadow: 0 0 0 0.2rem rgba(37,162,212,0.16);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.25);
 }
 
 .bg-light {
-    background-color: rgba(255,255,255,0.04) !important;
+    background-color: #f9f9f9 !important;
 }
 
 .theme-footer {
-    border-top: 1px solid rgba(255,255,255,0.08);
+    border-top: 1px solid #e0e0e0;
 }
 
 a {
@@ -122,5 +104,5 @@ a {
 }
 
 a:hover {
-    color: var(--accent);
+    color: var(--accent-dark);
 }
