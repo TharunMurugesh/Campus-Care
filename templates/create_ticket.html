@@ -4,7 +4,7 @@
     <div class="col-md-8">
         <div class="card shadow-sm border-0 mt-3">
             <div class="card-body p-4">
-                <h4 class="card-title mb-4">Create New Ticket</h4>
+                <h4 class="card-title mb-4">Report an Issue</h4>
                 <form method="POST">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-3">
@@ -12,9 +12,9 @@
                         <input type="text" name="title" class="form-control" required placeholder="Brief summary of the issue">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Department</label>
+                        <label class="form-label">Support team</label>
                         <select name="department_id" class="form-select" required>
-                            <option value="">Select Department</option>
+                            <option value="">Select a team</option>
                             {% for dept in departments %}
                                 <option value="{{ dept.id }}">{{ dept.name }}</option>
                             {% endfor %}
@@ -30,7 +30,7 @@
                     </div>
                     <div class="mb-4">
                         <label class="form-label">Description</label>
-                        <textarea name="description" class="form-control" rows="5" required placeholder="Provide details about the issue..."></textarea>
+                        <textarea name="description" class="form-control" rows="5" required placeholder="Describe what happened and how it affects the community..."></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary">Submit Ticket</button>
                     <a href="{{ url_for('student_dashboard') }}" class="btn btn-light ms-2">Cancel</a>

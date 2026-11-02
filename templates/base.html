@@ -18,15 +18,15 @@
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav me-auto">
         {% if session.get('user_id') %}
-            {% if session.get('role') == 'student' %}
+            {% if session.get('role') in ['member', 'student'] %}
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('student_dashboard') }}">Dashboard</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('create_ticket') }}">New Ticket</a></li>
             {% elif session.get('role') == 'staff' %}
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('staff_dashboard') }}">My Tickets</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('department_queue') }}">Department Queue</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('department_queue') }}">Team Queue</a></li>
             {% elif session.get('role') == 'campus_admin' %}
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('manage_departments') }}">Departments</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('manage_departments') }}">Support Teams</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('manage_users') }}">Users</a></li>
             {% endif %}
         {% endif %}
@@ -49,7 +49,7 @@
             </li>
         {% else %}
             <li class="nav-item"><a class="nav-link" href="{{ url_for('user_login') }}">Login</a></li>
-            <li class="nav-item"><a class="nav-link" href="{{ url_for('campus_login') }}">Admin Login</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('campus_login') }}">Community Admin</a></li>
         {% endif %}
       </ul>
     </div>

@@ -2,8 +2,8 @@
 {% from '_macros.html' import search_box, sort_header, pagination_controls %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">My Tickets</h2>
-    <a href="{{ url_for('create_ticket') }}" class="btn btn-primary">Create New Ticket</a>
+    <h2 class="mb-0">My Reports</h2>
+    <a href="{{ url_for('create_ticket') }}" class="btn btn-primary">Report an Issue</a>
 </div>
 
 {{ search_box(q, '<input type="hidden" name="status" value="' ~ (status or '') ~ '">') }}
@@ -16,7 +16,7 @@
                     <tr>
                         <th>{{ sort_header('Code', 'code', sort, dir) }}</th>
                         <th>{{ sort_header('Title', 'title', sort, dir) }}</th>
-                        <th>{{ sort_header('Department', 'department', sort, dir) }}</th>
+                        <th>{{ sort_header('Support team', 'department', sort, dir) }}</th>
                         <th>{{ sort_header('Status', 'status', sort, dir) }}</th>
                         <th>{{ sort_header('Priority', 'priority', sort, dir) }}</th>
                         <th>{{ sort_header('Updated', 'updated', sort, dir) }}</th>
@@ -41,7 +41,7 @@
                         <td><a href="{{ url_for('ticket_details', id=ticket.id) }}" class="btn btn-sm btn-outline-primary">View</a></td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="7" class="text-center text-muted py-4">You haven't submitted any tickets yet.</td></tr>
+                    <tr><td colspan="7" class="text-center text-muted py-4">You haven't submitted any reports yet.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

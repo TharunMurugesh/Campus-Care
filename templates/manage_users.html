@@ -24,7 +24,7 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Name</th><th>Email</th><th>Department</th><th>Status</th><th>Action</th>
+                        <th>Name</th><th>Email</th><th>Support team</th><th>Status</th><th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -57,10 +57,10 @@
 
 <div class="card shadow-sm border-0 mb-4">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h4 class="mb-0 text-success">Student Management</h4>
+        <h4 class="mb-0 text-success">Community Members</h4>
         <div>
-            <button class="btn btn-sm btn-outline-success me-2" data-bs-toggle="modal" data-bs-target="#addStudentModal">Add Student</button>
-            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#bulkStudentModal">Bulk Add Student</button>
+            <button class="btn btn-sm btn-outline-success me-2" data-bs-toggle="modal" data-bs-target="#addStudentModal">Add Member</button>
+            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#bulkStudentModal">Bulk Add Members</button>
         </div>
     </div>
     <div class="card-body p-0">
@@ -68,11 +68,11 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Name</th><th>Email</th><th>University ID</th><th>Status</th><th>Action</th>
+                        <th>Name</th><th>Email</th><th>Member ID</th><th>Status</th><th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for user in students %}
+                    {% for user in members %}
                     <tr>
                         <td>{{ user.name }}</td>
                         <td>{{ user.email }}</td>
@@ -91,7 +91,7 @@
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="5" class="text-center text-muted py-4">No students found.</td></tr>
+                    <tr><td colspan="5" class="text-center text-muted py-4">No community members found.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -112,11 +112,11 @@
         <div class="modal-body">
             <div class="mb-3"><label>Name</label><input type="text" name="name" class="form-control" required></div>
             <div class="mb-3"><label>Email</label><input type="email" name="email" class="form-control" required></div>
-            <div class="mb-3"><label>Employee ID (Optional)</label><input type="text" name="university_id" class="form-control"></div>
+            <div class="mb-3"><label>Member or staff ID (Optional)</label><input type="text" name="member_id" class="form-control"></div>
             <div class="mb-3">
-                <label>Department</label>
+                <label>Support team</label>
                 <select name="department_id" class="form-select" required>
-                    <option value="">Select Department</option>
+                    <option value="">Select a team</option>
                     {% for dept in departments %}
                         <option value="{{ dept.id }}">{{ dept.name }}</option>
                     {% endfor %}
@@ -144,7 +144,8 @@
         </div>
         <div class="modal-body">
             <div class="alert alert-info small">
-                <strong>CSV Format:</strong> university_id, name, official_email<br>
+                <strong>CSV columns:</strong> name, email, member_id (optional), team<br>
+                For staff, team must match an existing support team.<br>
                 Default password: <code>password123</code>
             </div>
             <input type="file" name="csv_file" class="form-control" accept=".csv" required>
@@ -162,19 +163,19 @@
     <div class="modal-content">
       <form method="POST" action="{{ url_for('add_user') }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="role" value="student">
+        <input type="hidden" name="role" value="member">
         <div class="modal-header">
-          <h5 class="modal-title">Add Student</h5>
+          <h5 class="modal-title">Add Community Member</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
             <div class="mb-3"><label>Name</label><input type="text" name="name" class="form-control" required></div>
             <div class="mb-3"><label>Email</label><input type="email" name="email" class="form-control" required></div>
-            <div class="mb-3"><label>University ID (Optional)</label><input type="text" name="university_id" class="form-control"></div>
+            <div class="mb-3"><label>Member ID (Optional)</label><input type="text" name="member_id" class="form-control"></div>
             <div class="mb-3"><label>Password</label><input type="password" name="password" class="form-control" required></div>
         </div>
         <div class="modal-footer">
-          <button type="submit" class="btn btn-success">Add Student</button>
+          <button type="submit" class="btn btn-success">Add Member</button>
         </div>
       </form>
     </div>
@@ -186,20 +187,20 @@
     <div class="modal-content">
       <form method="POST" action="{{ url_for('bulk_upload_users') }}" enctype="multipart/form-data">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="role" value="student">
+        <input type="hidden" name="role" value="member">
         <div class="modal-header">
-          <h5 class="modal-title">Bulk Add Students</h5>
+          <h5 class="modal-title">Bulk Add Members</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
             <div class="alert alert-info small">
-                <strong>CSV Format:</strong> university_id, name, official_email<br>
+                <strong>CSV columns:</strong> name, email, member_id (optional)<br>
                 Default password: <code>password123</code>
             </div>
             <input type="file" name="csv_file" class="form-control" accept=".csv" required>
         </div>
         <div class="modal-footer">
-          <button type="submit" class="btn btn-success">Upload Students</button>
+          <button type="submit" class="btn btn-success">Upload Members</button>
         </div>
       </form>
     </div>

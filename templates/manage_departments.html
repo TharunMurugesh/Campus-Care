@@ -1,21 +1,21 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0">Manage Departments</h2>
+    <h2 class="mb-0">Manage Support Teams</h2>
 </div>
 
 <div class="row">
     <div class="col-md-4 mb-4">
         <div class="card shadow-sm border-0">
             <div class="card-body p-4">
-                <h5 class="card-title mb-3">Add Department</h5>
+                <h5 class="card-title mb-3">Add a Support Team</h5>
                 <form method="POST">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-4">
-                        <label class="form-label">Department Name</label>
-                        <input type="text" name="name" class="form-control" required placeholder="e.g. IT Support">
+                        <label class="form-label">Team name</label>
+                        <input type="text" name="name" class="form-control" required placeholder="e.g. Facilities, Volunteer Support">
                     </div>
-                    <button type="submit" class="btn btn-success w-100">Add Department</button>
+                    <button type="submit" class="btn btn-success w-100">Add Team</button>
                 </form>
             </div>
         </div>
@@ -28,7 +28,7 @@
                     <table class="table table-hover mb-0 align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th>Department Name</th>
+                                <th>Team Name</th>
                                 <th>Total Tickets</th>
                                 <th>Created Date</th>
                                 <th>Action</th>
@@ -41,14 +41,14 @@
                                 <td><span class="badge bg-secondary rounded-pill">{{ dept.ticket_count }}</span></td>
                                 <td>{{ dept.created_at.strftime('%Y-%m-%d') }}</td>
                                 <td>
-                                    <form method="POST" action="{{ url_for('delete_department', id=dept.id) }}" onsubmit="return confirm('Delete this department?');">
+                                    <form method="POST" action="{{ url_for('delete_department', id=dept.id) }}" onsubmit="return confirm('Delete this team?');">
                                         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
                                     </form>
                                 </td>
                             </tr>
                             {% else %}
-                            <tr><td colspan="4" class="text-center text-muted py-4">No departments found.</td></tr>
+                            <tr><td colspan="4" class="text-center text-muted py-4">No support teams found.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>

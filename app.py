@@ -17,6 +17,17 @@ app.config["SESSION_COOKIE_SECURE"] = os.getenv("SESSION_COOKIE_SECURE", "0") ==
 
 VALID_PRIORITIES = {"LOW", "MEDIUM", "HIGH"}
 VALID_STATUSES = {"OPEN", "CLAIMED", "IN_PROGRESS", "ESCALATED", "RESOLVED", "CLOSED"}
+ORGANIZATION_TYPES = {
+    "school": "School",
+    "university": "University or college",
+    "nonprofit": "Nonprofit",
+    "neighborhood": "Neighborhood group",
+    "workplace": "Workplace",
+    "volunteer_group": "Volunteer group",
+    "online_community": "Online community",
+    "other": "Other",
+}
+MEMBER_ROLES = ("member", "student")
 SORT_WHITELIST = {
     "code": "ticket_code", "title": "title", "status": "status",
     "priority": "priority", "updated": "updated_at", "created": "created_at",
@@ -59,7 +70,10 @@ def role_required(roles):
     def decorator(f):
         @wraps(f)
         def decorated(*args, **kwargs):
-            if session.get("role") not in roles:
+            role = session.get("role")
+            if role == "student":
+                role = "member"
+            if role not in roles:
                 abort(403)
             return f(*args, **kwargs)
         return decorated
@@ -133,7 +147,7 @@ def next_campus_code():
 @app.route("/")
 def index():
     role = session.get("role")
-    if role == "student":
+    if role in MEMBER_ROLES:
         return redirect(url_for("student_dashboard"))
     if role == "staff":
         return redirect(url_for("staff_dashboard"))
@@ -143,13 +157,17 @@ def index():
 
 
 @app.route("/campus/register", methods=["GET", "POST"])
+@app.route("/community/register", methods=["GET", "POST"])
 def campus_create():
     if request.method == "POST":
         campus_name = request.form.get("campus_name", "").strip()
-        official_domain = request.form.get("official_domain", "").strip()
+        organization_type = request.form.get("organization_type", "other").strip()
+        admin_name = request.form.get("admin_name", "").strip()
+        admin_email = request.form.get("admin_email", "").strip().lower()
         password = request.form.get("password")
 
-        if not campus_name or not official_domain or not password:
+        if (not campus_name or not admin_name or not admin_email or not password
+                or organization_type not in ORGANIZATION_TYPES):
             flash("All fields are required.", "danger")
             return redirect(url_for("campus_create"))
 
@@ -159,26 +177,27 @@ def campus_create():
 
         try:
             campus = execute_query(
-                "INSERT INTO campuses (campus_code, campus_name, official_domain, campus_password_hash) "
-                "VALUES (%s, %s, %s, %s) RETURNING id",
-                (campus_code, campus_name, official_domain, campus_hash),
+                "INSERT INTO campuses (campus_code, campus_name, official_domain, campus_password_hash, organization_type) "
+                "VALUES (%s, %s, NULL, %s, %s) RETURNING id",
+                (campus_code, campus_name, campus_hash, organization_type),
                 fetch=True, commit=True,
             )
             execute_query(
                 "INSERT INTO users (campus_id, name, email, password_hash, role) "
                 "VALUES (%s, %s, %s, %s, %s)",
-                (campus["id"], "Campus Admin", f"admin@{official_domain}", admin_hash, "campus_admin"),
+                (campus["id"], admin_name, admin_email, admin_hash, "campus_admin"),
                 commit=True,
             )
-            flash(f"Campus created! Your Campus Code is {campus_code}. Save it.", "success")
+            flash(f"Community space created! Your access code is {campus_code}. Save it.", "success")
             return redirect(url_for("campus_login"))
         except Exception:
-            flash("Error creating campus. It may already exist.", "danger")
+            flash("Could not create the community space. Check the details and try again.", "danger")
 
-    return render_template("campus_create.html")
+    return render_template("campus_create.html", organization_types=ORGANIZATION_TYPES)
 
 
 @app.route("/campus/login", methods=["GET", "POST"])
+@app.route("/community/admin-login", methods=["GET", "POST"])
 def campus_login():
     if request.method == "POST":
         campus_code = request.form.get("campus_code")
@@ -200,12 +219,13 @@ def campus_login():
                 session["user_id"] = admin["id"]
                 session["campus_id"] = campus["id"]
                 session["campus_name"] = campus["campus_name"]
+                session["organization_type"] = campus.get("organization_type", "other")
                 session["role"] = "campus_admin"
                 session["name"] = admin["name"]
                 flash(f"Welcome back, {campus['campus_name']}!", "success")
                 return redirect(url_for("admin_dashboard"))
 
-        flash("Invalid campus code or password.", "danger")
+        flash("Invalid community access code or password.", "danger")
     return render_template("campus_login.html")
 
 
@@ -213,21 +233,32 @@ def campus_login():
 def user_login():
     if request.method == "POST":
         email = request.form.get("email", "").strip()
+        community_code = request.form.get("community_code", "").strip().upper()
         password = request.form.get("password")
 
-        user = execute_query(
-            "SELECT u.*, c.campus_name FROM users u "
+        users = execute_query(
+            "SELECT u.*, c.campus_name, c.organization_type FROM users u "
             "JOIN campuses c ON u.campus_id = c.id "
-            "WHERE u.email = %s AND u.is_active = TRUE AND c.is_active = TRUE",
-            (email,), fetch=True,
+            "WHERE LOWER(u.email) = LOWER(%s) AND u.is_active = TRUE AND c.is_active = TRUE "
+            "AND (%s = '' OR c.campus_code = %s)",
+            (email, community_code, community_code), fetch=True, fetchall=True,
         )
-        if user and check_password_hash(user["password_hash"], password):
+        matching_users = [
+            user for user in (users or [])
+            if password and check_password_hash(user["password_hash"], password)
+        ]
+        if len(matching_users) > 1:
+            flash("This email has access to multiple communities. Enter the community access code to continue.", "warning")
+            return render_template("user_login.html")
+        user = matching_users[0] if matching_users else None
+        if user:
             session.clear()
             session["_csrf_token"] = secrets.token_hex(32)
             session["user_id"] = user["id"]
             session["campus_id"] = user["campus_id"]
             session["campus_name"] = user["campus_name"]
-            session["role"] = user["role"]
+            session["organization_type"] = user.get("organization_type", "other")
+            session["role"] = "member" if user["role"] == "student" else user["role"]
             session["name"] = user["name"]
             session["department_id"] = user["department_id"]
             flash(f"Welcome back, {user['name']}!", "success")
@@ -252,8 +283,9 @@ def _student_tickets_count(user_id, campus_id):
 
 
 @app.route("/student/dashboard")
+@app.route("/member/dashboard")
 @login_required
-@role_required("student")
+@role_required(("member",))
 def student_dashboard():
     user_id = session["user_id"]
     campus_id = session["campus_id"]
@@ -301,7 +333,7 @@ def department_queue():
     campus_id = session["campus_id"]
 
     if not dept_id:
-        flash("You are not assigned to any department.", "warning")
+        flash("You are not assigned to a support team.", "warning")
         return render_template("department_queue.html", pager=None)
 
     q, search_clause, search_params = search_filter(["t.title", "t.ticket_code", "u.name"])
@@ -339,7 +371,7 @@ def admin_dashboard():
 
 @app.route("/ticket/create", methods=["GET", "POST"])
 @login_required
-@role_required("student")
+@role_required(("member",))
 def create_ticket():
     campus_id = session["campus_id"]
 
@@ -404,7 +436,7 @@ def ticket_details(id):
     if not ticket:
         abort(404)
 
-    if role == "student" and ticket["student_id"] != user_id:
+    if role in MEMBER_ROLES and ticket["student_id"] != user_id:
         abort(403)
     if role == "staff" and ticket["department_id"] != session.get("department_id"):
         abort(403)
@@ -508,7 +540,7 @@ def add_comment(id):
     ticket = execute_query("SELECT * FROM tickets WHERE id = %s AND campus_id = %s", (id, campus_id), fetch=True)
     if not ticket:
         abort(404)
-    if session["role"] == "student" and ticket["student_id"] != user_id:
+    if session["role"] in MEMBER_ROLES and ticket["student_id"] != user_id:
         abort(403)
     if session["role"] == "staff" and ticket["department_id"] != session.get("department_id"):
         abort(403)
@@ -533,16 +565,16 @@ def manage_users():
     base = (
         "SELECT u.*, d.name AS department_name FROM users u "
         "LEFT JOIN departments d ON u.department_id = d.id "
-        f"WHERE u.campus_id = %s AND u.role IN ('staff', 'student') {search_clause}"
+        f"WHERE u.campus_id = %s AND u.role IN ('staff', 'member', 'student') {search_clause}"
     )
     pager = paginate(base, [campus_id, *search_params], **parse_pagination(20))
     pager["rows"] = sorted(pager["rows"], key=lambda r: (r[sort_col] or "").lower(), reverse=(sort_dir == "DESC"))
 
     departments = execute_query("SELECT * FROM departments WHERE campus_id = %s ORDER BY name", (campus_id,), fetch=True, fetchall=True)
     staffs = [u for u in pager["rows"] if u["role"] == "staff"]
-    students = [u for u in pager["rows"] if u["role"] == "student"]
+    members = [u for u in pager["rows"] if u["role"] in MEMBER_ROLES]
 
-    return render_template("manage_users.html", staffs=staffs, students=students, departments=departments, pager=pager, q=q)
+    return render_template("manage_users.html", staffs=staffs, members=members, departments=departments, pager=pager, q=q)
 
 
 @app.route("/admin/users/add", methods=["POST"])
@@ -551,19 +583,19 @@ def manage_users():
 def add_user():
     campus_id = session["campus_id"]
     name = request.form.get("name", "").strip()
-    email = request.form.get("email", "").strip()
-    university_id = request.form.get("university_id", "").strip()
+    email = request.form.get("email", "").strip().lower()
+    member_id = request.form.get("member_id", "").strip()
     role = request.form.get("role", "").strip()
     department_id = request.form.get("department_id") or None
     password = request.form.get("password")
 
-    if role not in ("student", "staff"):
+    if role not in ("member", "staff"):
         abort(400, "Invalid role.")
     if not name or not email or not password:
         flash("Name, email and password are required.", "danger")
         return redirect(url_for("manage_users"))
     if role == "staff" and not department_id:
-        flash("Staff must be assigned to a department.", "danger")
+        flash("Support team members must be assigned to a team.", "danger")
         return redirect(url_for("manage_users"))
 
     hashed = generate_password_hash(password)
@@ -571,7 +603,7 @@ def add_user():
         execute_query(
             "INSERT INTO users (campus_id, university_id, name, email, password_hash, role, department_id) "
             "VALUES (%s, %s, %s, %s, %s, %s, %s)",
-            (campus_id, university_id, name, email, hashed, role, department_id),
+            (campus_id, member_id or None, name, email, hashed, role, department_id),
             commit=True,
         )
         flash(f"{role.capitalize()} created.", "success")
@@ -589,7 +621,7 @@ def toggle_user(id):
     if not user:
         abort(404)
     if user["role"] == "campus_admin":
-        flash("Cannot deactivate campus admin.", "danger")
+        flash("Cannot deactivate the community admin.", "danger")
         return redirect(url_for("manage_users"))
 
     execute_query("UPDATE users SET is_active = %s WHERE id = %s", (not user["is_active"], id), commit=True)
@@ -608,9 +640,9 @@ def manage_departments():
         if name:
             try:
                 execute_query("INSERT INTO departments (campus_id, name) VALUES (%s, %s)", (campus_id, name), commit=True)
-                flash("Department added.", "success")
+                flash("Support team added.", "success")
             except Exception:
-                flash("Department might already exist.", "danger")
+                flash("That support team might already exist.", "danger")
         return redirect(url_for("manage_departments"))
 
     departments = execute_query(
@@ -632,14 +664,14 @@ def delete_department(id):
         (id, campus_id), fetch=True,
     )["c"]
     if open_count > 0:
-        flash(f"Cannot delete: {open_count} open ticket(s) still in this department. Resolve or move them first.", "danger")
+        flash(f"Cannot delete this team: {open_count} open report(s) still use it. Resolve or move them first.", "danger")
         return redirect(url_for("manage_departments"))
 
     try:
         execute_query("DELETE FROM departments WHERE id = %s AND campus_id = %s", (id, campus_id), commit=True)
-        flash("Department deleted.", "success")
+        flash("Support team deleted.", "success")
     except Exception:
-        flash("Cannot delete department (it may have historical tickets).", "danger")
+        flash("Cannot delete this team because reports still reference it.", "danger")
     return redirect(url_for("manage_departments"))
 
 
@@ -649,8 +681,8 @@ def delete_department(id):
 def bulk_upload_users():
     campus_id = session["campus_id"]
     user_id = session["user_id"]
-    role = request.form.get("role", "student")
-    if role not in ("student", "staff"):
+    role = request.form.get("role", "member")
+    if role not in ("member", "staff"):
         abort(400, "Invalid role.")
 
     if "csv_file" not in request.files:
@@ -681,16 +713,27 @@ def bulk_upload_users():
         default_hash = generate_password_hash("password123")
         for row in rows:
             try:
-                university_id = (row.get("university_id") or "").strip()
+                member_id = (row.get("member_id") or row.get("university_id") or "").strip()
                 name = (row.get("name") or "").strip()
-                email = (row.get("official_email") or row.get("email") or "").strip()
-                if not all([university_id, name, email]):
+                email = (row.get("email") or row.get("official_email") or "").strip().lower()
+                if not all([name, email]):
                     failed += 1
                     continue
+                department_id = None
+                if role == "staff":
+                    team_name = (row.get("team") or row.get("department") or "").strip()
+                    team = execute_query(
+                        "SELECT id FROM departments WHERE campus_id = %s AND LOWER(name) = LOWER(%s)",
+                        (campus_id, team_name), fetch=True,
+                    ) if team_name else None
+                    if not team:
+                        failed += 1
+                        continue
+                    department_id = team["id"]
                 execute_query(
-                    "INSERT INTO users (campus_id, university_id, name, email, password_hash, role) "
-                    "VALUES (%s, %s, %s, %s, %s, %s)",
-                    (campus_id, university_id, name, email, default_hash, role),
+                    "INSERT INTO users (campus_id, university_id, name, email, password_hash, role, department_id) "
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    (campus_id, member_id or None, name, email, default_hash, role, department_id),
                     commit=True,
                 )
                 success += 1

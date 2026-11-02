@@ -2,7 +2,7 @@
 {% from '_macros.html' import search_box, pagination_controls %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Department Queue</h2>
+    <h2 class="mb-0">Team Queue</h2>
     <a href="{{ url_for('staff_dashboard') }}" class="btn btn-secondary">Back to My Tickets</a>
 </div>
 
@@ -15,7 +15,7 @@
             <table class="table table-hover mb-0 align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Code</th><th>Title</th><th>Student</th><th>Priority</th><th>Created</th><th>Action</th>
+                        <th>Code</th><th>Title</th><th>Member</th><th>Priority</th><th>Created</th><th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -34,7 +34,7 @@
                         </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="6" class="text-center text-muted py-4">No open tickets in your department queue right now.</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted py-4">No open reports in your team queue right now.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -43,6 +43,6 @@
 </div>
 {{ pagination_controls(pager, '&q=' ~ (q or '')) }}
 {% else %}
-<div class="alert alert-warning">You are not assigned to a department.</div>
+<div class="alert alert-warning">You are not assigned to a support team.</div>
 {% endif %}
 {% endblock %}

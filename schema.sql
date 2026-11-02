@@ -19,7 +19,8 @@ CREATE TABLE campuses (
     id                   SERIAL PRIMARY KEY,
     campus_code          VARCHAR(20) UNIQUE NOT NULL,
     campus_name          VARCHAR(150) NOT NULL,
-    official_domain      VARCHAR(150) NOT NULL,
+    organization_type    VARCHAR(40) NOT NULL DEFAULT 'other',
+    official_domain      VARCHAR(150),
     campus_password_hash VARCHAR(255) NOT NULL,
     is_active            BOOLEAN NOT NULL DEFAULT TRUE,
     created_at           TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -46,7 +47,7 @@ CREATE TABLE users (
     email         VARCHAR(150) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     role          VARCHAR(20) NOT NULL
-        CHECK (role IN ('student','staff','campus_admin')),
+        CHECK (role IN ('member','staff','campus_admin')),
     department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
     is_active     BOOLEAN NOT NULL DEFAULT TRUE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,

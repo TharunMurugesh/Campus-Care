@@ -2,8 +2,8 @@
 {% from '_macros.html' import search_box, sort_header, pagination_controls %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">My Assigned Tickets</h2>
-    <a href="{{ url_for('department_queue') }}" class="btn btn-primary">View Department Queue</a>
+    <h2 class="mb-0">My Assigned Reports</h2>
+    <a href="{{ url_for('department_queue') }}" class="btn btn-primary">View Team Queue</a>
 </div>
 
 {{ search_box(q, '<input type="hidden" name="status" value="' ~ (status or '') ~ '">') }}
@@ -16,7 +16,7 @@
                     <tr>
                         <th>{{ sort_header('Code', 'code', sort, dir) }}</th>
                         <th>{{ sort_header('Title', 'title', sort, dir) }}</th>
-                        <th>{{ sort_header('Student', 'student', sort, dir) }}</th>
+                        <th>{{ sort_header('Member', 'student', sort, dir) }}</th>
                         <th>{{ sort_header('Status', 'status', sort, dir) }}</th>
                         <th>{{ sort_header('Priority', 'priority', sort, dir) }}</th>
                         <th>{{ sort_header('Updated', 'updated', sort, dir) }}</th>
