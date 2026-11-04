@@ -1,1 +1,1 @@
--- No tenant data is seeded; campuses are created through the web UI.
+-- No tenant data is seeded; organizations/workspaces are created through the web UI.

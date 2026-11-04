@@ -1,24 +1,52 @@
 {% extends 'base.html' %}
+{% block title %}Admin Sign In — Cumin{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-5">
-        <div class="card shadow-sm border-0 mt-5">
-            <div class="card-body p-5">
-                <h3 class="card-title text-center mb-4">Community Admin Login</h3>
+    <div class="col-md-6 col-lg-5">
+        <div class="auth-card my-4">
+            <div class="auth-header" style="background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);">
+                <div class="brand-icon mx-auto mb-3" style="width: 44px; height: 44px; font-size: 1.5rem; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+                <h3 class="fw-bold mb-1">Organization Admin</h3>
+                <p class="text-white-50 mb-0 small">Manage support teams, user accounts & workflows</p>
+            </div>
+            
+            <div class="auth-body">
                 <form method="POST">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    
                     <div class="mb-3">
-                        <label class="form-label">Community access code</label>
-                        <input type="text" name="campus_code" class="form-control" required placeholder="CCYYYYNNNN" autocomplete="username">
+                        <label class="form-label">Organization Access Code</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white text-muted"><i class="bi bi-hash"></i></span>
+                            <input type="text" name="campus_code" class="form-control font-mono fw-bold" required placeholder="e.g. CM20260001" autocomplete="username">
+                        </div>
+                        <small class="form-text text-muted" style="font-size: 0.78rem;">The unique access code issued when your organization workspace was registered.</small>
                     </div>
+                    
                     <div class="mb-4">
-                        <label class="form-label">Password</label>
-                        <input type="password" name="password" class="form-control" required>
+                        <label class="form-label">Admin Master Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white text-muted"><i class="bi bi-lock"></i></span>
+                            <input type="password" name="password" class="form-control" required placeholder="••••••••">
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-dark w-100">Log in to admin</button>
+                    
+                    <button type="submit" class="btn btn-dark w-100 py-2 mb-3">
+                        <i class="bi bi-shield-lock me-1"></i> Log In as Administrator
+                    </button>
                 </form>
-                <div class="text-center mt-4">
-                    <a href="{{ url_for('campus_create') }}" class="text-decoration-none">Create a community space</a>
+
+                <div class="text-center pt-3 border-top">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{{ url_for('user_login') }}" class="text-decoration-none small text-muted">
+                            <i class="bi bi-arrow-left me-1"></i> Member Login
+                        </a>
+                        <a href="{{ url_for('campus_create') }}" class="text-decoration-none small text-primary fw-semibold">
+                            Create New Workspace <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

@@ -29,9 +29,9 @@ def _get_pool():
                 maxconn=int(os.getenv("DB_POOL_MAX", "10")),
                 host=os.getenv("DB_HOST", "localhost"),
                 port=os.getenv("DB_PORT", "5432"),
-                dbname=os.getenv("DB_NAME", "campus_issue_system"),
-                user=os.getenv("DB_USER", "campus_app"),
-                password=os.getenv("DB_PASSWORD", "postgres"),
+                dbname=os.getenv("DB_NAME", os.getenv("POSTGRES_DB", "cumin_db")),
+                user=os.getenv("DB_USER", os.getenv("POSTGRES_USER", "cumin_app")),
+                password=os.getenv("DB_PASSWORD", os.getenv("POSTGRES_PASSWORD", "postgres")),
             )
     return _pool
 

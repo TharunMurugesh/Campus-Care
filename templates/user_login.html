@@ -1,27 +1,63 @@
 {% extends 'base.html' %}
+{% block title %}Sign In — Cumin{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-5">
-        <div class="card shadow-sm border-0 mt-5">
-            <div class="card-body p-5">
-                <h3 class="card-title text-center mb-2">Member & Staff Login</h3>
-                <p class="text-muted text-center mb-4">Use the email address your community admin added.</p>
+    <div class="col-md-6 col-lg-5">
+        <div class="auth-card my-4">
+            <div class="auth-header">
+                <div class="brand-icon mx-auto mb-3" style="width: 44px; height: 44px; font-size: 1.5rem;">
+                    <i class="bi bi-layers-fill"></i>
+                </div>
+                <h3 class="fw-bold mb-1">Welcome to Cumin</h3>
+                <p class="text-white-50 mb-0 small">Member, Employee & Staff Support Portal</p>
+            </div>
+            
+            <div class="auth-body">
                 <form method="POST">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    
                     <div class="mb-3">
                         <label class="form-label">Email Address</label>
-                        <input type="email" name="email" class="form-control" required autocomplete="username" placeholder="you@example.org">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white text-muted"><i class="bi bi-envelope"></i></span>
+                            <input type="email" name="email" class="form-control" required autocomplete="username" placeholder="name@organization.com">
+                        </div>
                     </div>
+                    
                     <div class="mb-3">
-                        <label class="form-label">Community access code <span class="text-muted">(if you belong to more than one)</span></label>
-                        <input type="text" name="community_code" class="form-control" autocomplete="off" placeholder="CCYYYYNNNN">
+                        <label class="form-label d-flex justify-content-between">
+                            <span>Organization Access Code</span>
+                            <small class="text-muted fw-normal">Optional</small>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white text-muted"><i class="bi bi-key"></i></span>
+                            <input type="text" name="community_code" class="form-control font-mono" autocomplete="off" placeholder="e.g. CM20260001">
+                        </div>
+                        <small class="form-text text-muted" style="font-size: 0.78rem;">Required only if your email belongs to multiple workspaces.</small>
                     </div>
+                    
                     <div class="mb-4">
                         <label class="form-label">Password</label>
-                        <input type="password" name="password" class="form-control" required autocomplete="current-password">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white text-muted"><i class="bi bi-lock"></i></span>
+                            <input type="password" name="password" class="form-control" required autocomplete="current-password" placeholder="••••••••">
+                        </div>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Login</button>
+                    
+                    <button type="submit" class="btn btn-primary w-100 py-2 mb-3">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Sign In to Workspace
+                    </button>
                 </form>
+
+                <div class="text-center pt-3 border-top">
+                    <p class="text-muted small mb-2">Are you managing an organization or support teams?</p>
+                    <a href="{{ url_for('campus_login') }}" class="btn btn-sm btn-outline-secondary w-100 mb-2">
+                        <i class="bi bi-shield-lock me-1"></i> Organization Admin Login
+                    </a>
+                    <a href="{{ url_for('campus_create') }}" class="text-decoration-none small text-primary fw-semibold">
+                        Need to register a new organization? Click here
+                    </a>
+                </div>
             </div>
         </div>
     </div>

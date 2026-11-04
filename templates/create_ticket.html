@@ -1,39 +1,65 @@
 {% extends 'base.html' %}
+{% block title %}New Request — Cumin{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card shadow-sm border-0 mt-3">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 mt-2">
+            <div class="card-header bg-white py-3 border-bottom d-flex align-items-center gap-2">
+                <div class="brand-icon" style="width: 32px; height: 32px; font-size: 1rem;">
+                    <i class="bi bi-pencil-square"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark">Submit a Support Request</h5>
+                    <small class="text-muted">Route an issue or inquiry directly to the responsible team</small>
+                </div>
+            </div>
+
             <div class="card-body p-4">
-                <h4 class="card-title mb-4">Report an Issue</h4>
                 <form method="POST">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
                     <div class="mb-3">
-                        <label class="form-label">Title</label>
-                        <input type="text" name="title" class="form-control" required placeholder="Brief summary of the issue">
+                        <label class="form-label">Subject / Title</label>
+                        <input type="text" name="title" class="form-control" required placeholder="e.g. Broken projector in Room 402, Need VPN profile setup, Payroll inquiry">
+                        <small class="text-muted" style="font-size: 0.78rem;">A concise summary of what you need or what happened.</small>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Support team</label>
-                        <select name="department_id" class="form-select" required>
-                            <option value="">Select a team</option>
-                            {% for dept in departments %}
-                                <option value="{{ dept.id }}">{{ dept.name }}</option>
-                            {% endfor %}
-                        </select>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Target Support Team / Department</label>
+                            <select name="department_id" class="form-select" required>
+                                <option value="">Select a team...</option>
+                                {% for dept in departments %}
+                                    <option value="{{ dept.id }}">{{ dept.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted" style="font-size: 0.78rem;">The department best suited to assist with this issue.</small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Priority Level</label>
+                            <select name="priority" class="form-select" required>
+                                <option value="LOW">Low — Non-urgent question or minor request</option>
+                                <option value="MEDIUM" selected>Medium — Standard operational issue</option>
+                                <option value="HIGH">High — Urgent, blocking work or operations</option>
+                            </select>
+                            <small class="text-muted" style="font-size: 0.78rem;">Indicates how quickly your issue needs attention.</small>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Priority</label>
-                        <select name="priority" class="form-select" required>
-                            <option value="LOW">Low</option>
-                            <option value="MEDIUM">Medium</option>
-                            <option value="HIGH">High</option>
-                        </select>
-                    </div>
+
                     <div class="mb-4">
-                        <label class="form-label">Description</label>
-                        <textarea name="description" class="form-control" rows="5" required placeholder="Describe what happened and how it affects the community..."></textarea>
+                        <label class="form-label">Detailed Description</label>
+                        <textarea name="description" class="form-control" rows="6" required placeholder="Please provide specific details, error messages, room or asset numbers, or relevant context to help the team resolve this quickly..."></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary">Submit Ticket</button>
-                    <a href="{{ url_for('student_dashboard') }}" class="btn btn-light ms-2">Cancel</a>
+
+                    <div class="d-flex align-items-center justify-content-between pt-3 border-top">
+                        <a href="{{ url_for('student_dashboard') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-send-fill me-1"></i> Submit Request
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>

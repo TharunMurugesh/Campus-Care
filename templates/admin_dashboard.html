@@ -1,80 +1,204 @@
 {% extends 'base.html' %}
-{% from '_macros.html' import search_box, sort_header, pagination_controls %}
+{% from '_macros.html' import search_box, sort_header, pagination_controls, status_badge, priority_badge %}
+{% block title %}Admin Dashboard — Cumin{% endblock %}
 {% block content %}
-<h2 class="mb-4">Admin Dashboard</h2>
 
-<div class="row mb-4">
-    <div class="col-6 col-md-3 mb-3">
-        <div class="card text-white bg-primary mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Total Tickets</h5>
-                <h2 class="card-text">{{ stats.total_tickets or 0 }}</h2>
+<!-- Organization Hero & Access Code Banner -->
+<div class="org-hero-banner mb-4">
+    <div class="row align-items-center g-3">
+        <div class="col-lg-7">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge bg-warning text-dark fw-bold text-uppercase px-2 py-1" style="font-size: 0.72rem;">
+                    {{ organization_types.get(org.organization_type, org.organization_type or 'Organization') if organization_types else (org.organization_type or 'Workspace') | capitalize }}
+                </span>
+                <span class="text-white-50 small">&middot; Operations Dashboard</span>
             </div>
+            <h2 class="fw-bold mb-1 text-white">{{ org.campus_name or session.get('org_name') }}</h2>
+            <p class="text-white-50 mb-0 small">
+                Manage operational workflows, dispatch tickets to departments, and coordinate resolutions across your team.
+            </p>
         </div>
-    </div>
-    <div class="col-6 col-md-3 mb-3">
-        <div class="card text-white bg-danger mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Open</h5>
-                <h2 class="card-text">{{ stats.open_tickets or 0 }}</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3 mb-3">
-        <div class="card text-dark bg-warning mb-3">
-            <div class="card-body">
-                <h5 class="card-title">In Progress</h5>
-                <h2 class="card-text">{{ stats.in_progress or 0 }}</h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3 mb-3">
-        <div class="card text-white bg-success mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Resolved</h5>
-                <h2 class="card-text">{{ stats.resolved or 0 }}</h2>
+        <div class="col-lg-5 text-lg-end">
+            <div class="d-inline-flex flex-column align-items-lg-end gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="small text-white-50">Access Code:</span>
+                    <div class="org-code-box">
+                        <span id="accessCodeText">{{ org.campus_code or session.get('org_code') }}</span>
+                        <button type="button" class="btn btn-sm btn-light py-0 px-2 text-dark" onclick="copyAccessCode()" title="Copy Access Code">
+                            <i class="bi bi-clipboard" id="copyIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('manage_departments') }}" class="btn btn-sm btn-outline-light">
+                        <i class="bi bi-diagram-3 me-1"></i> Support Teams ({{ total_teams }})
+                    </a>
+                    <a href="{{ url_for('manage_users') }}" class="btn btn-sm btn-outline-light">
+                        <i class="bi bi-people me-1"></i> Users ({{ total_users }})
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<h4>Tickets</h4>
+<!-- KPI Metric Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="metric-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="metric-label">Total Tickets</div>
+                    <div class="metric-value">{{ stats.total_tickets or 0 }}</div>
+                </div>
+                <div class="metric-icon-box metric-icon-total">
+                    <i class="bi bi-ticket-detailed-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="metric-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="metric-label">Open / Pending</div>
+                    <div class="metric-value text-danger">{{ stats.open_tickets or 0 }}</div>
+                </div>
+                <div class="metric-icon-box metric-icon-open">
+                    <i class="bi bi-exclamation-circle-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="metric-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="metric-label">In Progress</div>
+                    <div class="metric-value text-warning">{{ stats.in_progress or 0 }}</div>
+                </div>
+                <div class="metric-icon-box metric-icon-progress">
+                    <i class="bi bi-arrow-repeat"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="metric-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="metric-label">Resolved</div>
+                    <div class="metric-value text-success">{{ stats.resolved or 0 }}</div>
+                </div>
+                <div class="metric-icon-box metric-icon-resolved">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-{{ search_box(q, '<input type="hidden" name="status" value="' ~ (status or '') ~ '">') }}
+<!-- Ticket Queue Section -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header-cumin d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-list-task me-2 text-primary"></i>Organization Ticket Queue</h5>
+            <small class="text-muted">All requests across support departments and teams</small>
+        </div>
+        
+        <!-- Filter Pills -->
+        <div class="filter-pills">
+            <a href="?status=&q={{ q or '' }}" class="filter-pill {% if not status %}active{% endif %}">All</a>
+            <a href="?status=OPEN&q={{ q or '' }}" class="filter-pill {% if status == 'OPEN' %}active{% endif %}">Open</a>
+            <a href="?status=CLAIMED&q={{ q or '' }}" class="filter-pill {% if status == 'CLAIMED' %}active{% endif %}">Claimed</a>
+            <a href="?status=IN_PROGRESS&q={{ q or '' }}" class="filter-pill {% if status == 'IN_PROGRESS' %}active{% endif %}">In Progress</a>
+            <a href="?status=ESCALATED&q={{ q or '' }}" class="filter-pill {% if status == 'ESCALATED' %}active{% endif %}">Escalated</a>
+            <a href="?status=RESOLVED&q={{ q or '' }}" class="filter-pill {% if status == 'RESOLVED' %}active{% endif %}">Resolved</a>
+            <a href="?status=CLOSED&q={{ q or '' }}" class="filter-pill {% if status == 'CLOSED' %}active{% endif %}">Closed</a>
+        </div>
+    </div>
 
-<div class="card shadow-sm border-0">
+    <div class="p-3 border-bottom bg-light">
+        {{ search_box(q, '<input type="hidden" name="status" value="' ~ (status or '') ~ '">', 'Search tickets by title, code, reporter...') }}
+    </div>
+
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle">
-                <thead class="table-light">
+            <table class="table table-cumin align-middle">
+                <thead>
                     <tr>
-                        <th>{{ sort_header('Code', 'code', sort, dir) }}</th>
+                        <th style="width: 140px;">{{ sort_header('Ticket Code', 'code', sort, dir) }}</th>
                         <th>{{ sort_header('Title', 'title', sort, dir) }}</th>
-                        <th>{{ sort_header('Support team', 'department', sort, dir) }}</th>
-                        <th>{{ sort_header('Member', 'student', sort, dir) }}</th>
+                        <th>{{ sort_header('Support Team', 'department', sort, dir) }}</th>
+                        <th>{{ sort_header('Reporter', 'student', sort, dir) }}</th>
                         <th>{{ sort_header('Status', 'status', sort, dir) }}</th>
                         <th>{{ sort_header('Priority', 'priority', sort, dir) }}</th>
-                        <th>Action</th>
+                        <th>{{ sort_header('Updated', 'updated', sort, dir) }}</th>
+                        <th class="text-end pe-3">Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for ticket in pager.rows %}
                     <tr>
-                        <td><code>{{ ticket.ticket_code }}</code></td>
-                        <td>{{ ticket.title }}</td>
-                        <td>{{ ticket.department_name }}</td>
-                        <td>{{ ticket.student_name }}</td>
-                        <td><span class="badge bg-secondary">{{ ticket.status }}</span></td>
-                        <td>{{ ticket.priority }}</td>
-                        <td><a href="{{ url_for('ticket_details', id=ticket.id) }}" class="btn btn-sm btn-outline-primary">View</a></td>
+                        <td><span class="ticket-code-pill">{{ ticket.ticket_code }}</span></td>
+                        <td>
+                            <a href="{{ url_for('ticket_details', id=ticket.id) }}" class="fw-bold text-decoration-none text-dark">
+                                {{ ticket.title }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ ticket.department_name }}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 0.7rem;">
+                                    {{ (ticket.student_name or 'U')[:1] | upper }}
+                                </div>
+                                <span>{{ ticket.student_name }}</span>
+                            </div>
+                        </td>
+                        <td>{{ status_badge(ticket.status) }}</td>
+                        <td>{{ priority_badge(ticket.priority) }}</td>
+                        <td><small class="text-muted">{{ ticket.updated_at.strftime('%b %d, %H:%M') }}</small></td>
+                        <td class="text-end pe-3">
+                            <a href="{{ url_for('ticket_details', id=ticket.id) }}" class="btn btn-sm btn-outline-primary py-1 px-2">
+                                Manage <i class="bi bi-chevron-right ms-1"></i>
+                            </a>
+                        </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="7" class="text-center text-muted py-3">No recent tickets found.</td></tr>
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <div class="text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 opacity-50"></i>
+                                <span class="fw-semibold">No tickets found matching your criteria.</span>
+                                {% if q or status %}
+                                <div class="mt-2">
+                                    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-sm btn-outline-secondary">Reset Filters</a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
 {{ pagination_controls(pager, '&q=' ~ (q or '') ~ '&status=' ~ (status or '') ~ '&sort=' ~ (sort or '') ~ '&dir=' ~ (dir or '')) }}
+
+<script>
+function copyAccessCode() {
+    const code = document.getElementById('accessCodeText').innerText.trim();
+    navigator.clipboard.writeText(code).then(() => {
+        const icon = document.getElementById('copyIcon');
+        icon.className = 'bi bi-check-lg text-success';
+        setTimeout(() => {
+            icon.className = 'bi bi-clipboard';
+        }, 2000);
+    });
+}
+</script>
 {% endblock %}

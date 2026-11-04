@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time database bootstrap for CampusCare.
+# One-time database bootstrap for Cumin Operations & Service Desk.
 #
 # Usage:  sudo bash setup_db.sh
 #
@@ -7,8 +7,8 @@
 # (e.g. role + DB created but schema load or seeder failed).
 set -euo pipefail
 
-DB_NAME="${DB_NAME:-campus_issue_system}"
-DB_USER="${DB_USER:-campus_app}"
+DB_NAME="${DB_NAME:-cumin_db}"
+DB_USER="${DB_USER:-cumin_app}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REAL_USER="${SUDO_USER:-${USER:-$(logname 2>/dev/null || echo nobody)}}"
 
@@ -29,7 +29,7 @@ PY=python3
 command -v "$PY" >/dev/null 2>&1 || PY=python
 rand_str() { "$PY" -c "import secrets,string;print(''.join(secrets.choice(string.ascii_letters+string.digits) for _ in range($1)))"; }
 
-green "==> CampusCare database bootstrap"
+green "==> Cumin Operations & Support Platform database bootstrap"
 echo    "    Database : $DB_NAME"
 echo    "    Role     : $DB_USER"
 echo    "    Repo user: $REAL_USER"

@@ -1,209 +1,248 @@
 {% extends 'base.html' %}
 {% from '_macros.html' import search_box, pagination_controls %}
+{% block title %}Manage Users — Cumin{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Manage Users</h2>
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1">User & Team Management</h2>
+        <p class="text-muted mb-0 small">Manage staff agents, members, employees, and bulk account provisioning</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#bulkUploadModal">
+            <i class="bi bi-file-earmark-arrow-up me-1"></i> Bulk CSV Import
+        </button>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+            <i class="bi bi-person-plus-fill me-1"></i> Add Single User
+        </button>
+    </div>
 </div>
 
-{{ search_box(q, '') }}
+<!-- Search Bar -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-people-fill text-primary me-2"></i>Organization Roster</h5>
+        <span class="badge bg-light text-muted border">{{ pager.total }} user(s) total</span>
+    </div>
+    <div class="p-3 border-bottom bg-light">
+        {{ search_box(q, '', 'Search users by name, email, or member/employee ID...') }}
+    </div>
+
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-cumin align-middle">
+                <thead>
+                    <tr>
+                        <th>User Name</th>
+                        <th>Email Address</th>
+                        <th>Identifier (ID)</th>
+                        <th>Role</th>
+                        <th>Support Team</th>
+                        <th>Status</th>
+                        <th class="text-end pe-3">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in pager.rows %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle {% if user.role == 'staff' %}bg-primary text-white{% else %}bg-secondary text-white{% endif %} d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                    {{ (user.name or 'U')[:1] | upper }}
+                                </div>
+                                <span class="fw-bold text-dark">{{ user.name }}</span>
+                            </div>
+                        </td>
+                        <td><span class="text-muted">{{ user.email }}</span></td>
+                        <td>
+                            {% if user.university_id %}
+                                <span class="font-mono small">{{ user.university_id }}</span>
+                            {% else %}
+                                <span class="text-muted small">&mdash;</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.role == 'staff' %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">Support Staff</span>
+                            {% elif user.role in ['campus_admin', 'org_admin'] %}
+                                <span class="badge bg-dark text-white px-2 py-1">Admin</span>
+                            {% else %}
+                                <span class="badge bg-light text-dark border px-2 py-1">Member / Employee</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.department_name %}
+                                <span class="badge bg-light text-dark border"><i class="bi bi-diagram-3 me-1"></i>{{ user.department_name }}</span>
+                            {% else %}
+                                <span class="text-muted small">&mdash;</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.is_active %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                    <i class="bi bi-check-circle-fill me-1"></i> Active
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                    <i class="bi bi-slash-circle me-1"></i> Inactive
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-3">
+                            {% if user.role not in ['campus_admin', 'org_admin'] %}
+                            <form method="POST" action="{{ url_for('toggle_user', id=user.id) }}" class="d-inline" onsubmit="return confirm('Toggle status for {{ user.name }}?');">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm {% if user.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %} py-1 px-2">
+                                    {% if user.is_active %}Deactivate{% else %}Activate{% endif %}
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="badge bg-light text-muted border">Protected</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <div class="text-muted">
+                                <i class="bi bi-people fs-1 d-block mb-2 opacity-50"></i>
+                                <h6 class="fw-bold text-dark">No users found</h6>
+                                <p class="small text-muted mb-0">Try adjusting your search query or add a user above.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
 {% if pager %}
 {{ pagination_controls(pager, '&q=' ~ (q or '')) }}
 {% endif %}
 
-<div class="card shadow-sm border-0 mb-5">
-    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h4 class="mb-0 text-primary">Staff Management</h4>
-        <div>
-            <button class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#addStaffModal">Add Staff</button>
-            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#bulkStaffModal">Bulk Add Staff</button>
-        </div>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>Name</th><th>Email</th><th>Support team</th><th>Status</th><th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user in staffs %}
-                    <tr>
-                        <td>{{ user.name }}<br><small class="text-muted">{{ user.university_id or '' }}</small></td>
-                        <td>{{ user.email }}</td>
-                        <td>{{ user.department_name or '-' }}</td>
-                        <td>
-                            {% if user.is_active %}<span class="badge bg-success">Active</span>
-                            {% else %}<span class="badge bg-danger">Inactive</span>{% endif %}
-                        </td>
-                        <td>
-                            <form method="POST" action="{{ url_for('toggle_user', id=user.id) }}" onsubmit="return confirm('Change user status?');">
-                                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-sm {% if user.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}">
-                                    {% if user.is_active %}Deactivate{% else %}Activate{% endif %}
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="5" class="text-center text-muted py-4">No staff members found.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<!-- Add Single User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" action="{{ url_for('add_user') }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-person-plus me-2"></i>Add User Account</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" name="name" class="form-control" required placeholder="e.g. Jordan Smith">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" name="email" class="form-control" required placeholder="user@organization.com">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Account Role</label>
+                        <select name="role" class="form-select" id="modalUserRole" required>
+                            <option value="member">Member / Employee (Can submit requests)</option>
+                            <option value="staff">Support Staff (Resolves & manages requests)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3" id="modalDepartmentGroup" style="display: none;">
+                        <label class="form-label">Assigned Support Team / Department <span class="text-danger">*</span></label>
+                        <select name="department_id" class="form-select" id="modalDepartmentSelect">
+                            <option value="">Select a team...</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept.id }}">{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted" style="font-size: 0.78rem;">Required for staff members to access team queues.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Employee / Member / Student ID <span class="text-muted">(Optional)</span></label>
+                        <input type="text" name="member_id" class="form-control" placeholder="e.g. EMP-1049, STU-4921">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Initial Password</label>
+                        <input type="password" name="password" class="form-control" required placeholder="Temporary password">
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Create Account</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-<div class="card shadow-sm border-0 mb-4">
-    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h4 class="mb-0 text-success">Community Members</h4>
-        <div>
-            <button class="btn btn-sm btn-outline-success me-2" data-bs-toggle="modal" data-bs-target="#addStudentModal">Add Member</button>
-            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#bulkStudentModal">Bulk Add Members</button>
-        </div>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th>Name</th><th>Email</th><th>Member ID</th><th>Status</th><th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user in members %}
-                    <tr>
-                        <td>{{ user.name }}</td>
-                        <td>{{ user.email }}</td>
-                        <td>{{ user.university_id or '-' }}</td>
-                        <td>
-                            {% if user.is_active %}<span class="badge bg-success">Active</span>
-                            {% else %}<span class="badge bg-danger">Inactive</span>{% endif %}
-                        </td>
-                        <td>
-                            <form method="POST" action="{{ url_for('toggle_user', id=user.id) }}" onsubmit="return confirm('Change user status?');">
-                                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="btn btn-sm {% if user.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}">
-                                    {% if user.is_active %}Deactivate{% else %}Activate{% endif %}
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="5" class="text-center text-muted py-4">No community members found.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<!-- Bulk CSV Upload Modal -->
+<div class="modal fade" id="bulkUploadModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" action="{{ url_for('bulk_upload_users') }}" enctype="multipart/form-data">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-arrow-up me-2"></i>Bulk Provision Users from CSV</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <div class="alert alert-info small mb-3">
+                        <strong class="d-block mb-1"><i class="bi bi-info-circle me-1"></i>CSV Column Format:</strong>
+                        <div><code>name, email, member_id (optional), team (for staff)</code></div>
+                        <div class="mt-1 text-muted">Default password for imported users will be set to: <code>password123</code></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Import Type / Target Role</label>
+                        <select name="role" class="form-select" required>
+                            <option value="member">Members / Employees</option>
+                            <option value="staff">Support Staff (Requires 'team' column matching department)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Select CSV File</label>
+                        <input type="file" name="csv_file" class="form-control" accept=".csv" required>
+                        <small class="text-muted" style="font-size: 0.78rem;">Files up to 5,000 rows supported.</small>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Upload & Provision</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-<div class="modal fade" id="addStaffModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form method="POST" action="{{ url_for('add_user') }}">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="role" value="staff">
-        <div class="modal-header">
-          <h5 class="modal-title">Add Staff Member</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-            <div class="mb-3"><label>Name</label><input type="text" name="name" class="form-control" required></div>
-            <div class="mb-3"><label>Email</label><input type="email" name="email" class="form-control" required></div>
-            <div class="mb-3"><label>Member or staff ID (Optional)</label><input type="text" name="member_id" class="form-control"></div>
-            <div class="mb-3">
-                <label>Support team</label>
-                <select name="department_id" class="form-select" required>
-                    <option value="">Select a team</option>
-                    {% for dept in departments %}
-                        <option value="{{ dept.id }}">{{ dept.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="mb-3"><label>Password</label><input type="password" name="password" class="form-control" required></div>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Add Staff</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const roleSelect = document.getElementById('modalUserRole');
+    const deptGroup = document.getElementById('modalDepartmentGroup');
+    const deptSelect = document.getElementById('modalDepartmentSelect');
 
-<div class="modal fade" id="bulkStaffModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form method="POST" action="{{ url_for('bulk_upload_users') }}" enctype="multipart/form-data">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="role" value="staff">
-        <div class="modal-header">
-          <h5 class="modal-title">Bulk Add Staff</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-            <div class="alert alert-info small">
-                <strong>CSV columns:</strong> name, email, member_id (optional), team<br>
-                For staff, team must match an existing support team.<br>
-                Default password: <code>password123</code>
-            </div>
-            <input type="file" name="csv_file" class="form-control" accept=".csv" required>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Upload Staff</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<div class="modal fade" id="addStudentModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form method="POST" action="{{ url_for('add_user') }}">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="role" value="member">
-        <div class="modal-header">
-          <h5 class="modal-title">Add Community Member</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-            <div class="mb-3"><label>Name</label><input type="text" name="name" class="form-control" required></div>
-            <div class="mb-3"><label>Email</label><input type="email" name="email" class="form-control" required></div>
-            <div class="mb-3"><label>Member ID (Optional)</label><input type="text" name="member_id" class="form-control"></div>
-            <div class="mb-3"><label>Password</label><input type="password" name="password" class="form-control" required></div>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-success">Add Member</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<div class="modal fade" id="bulkStudentModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form method="POST" action="{{ url_for('bulk_upload_users') }}" enctype="multipart/form-data">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="role" value="member">
-        <div class="modal-header">
-          <h5 class="modal-title">Bulk Add Members</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-            <div class="alert alert-info small">
-                <strong>CSV columns:</strong> name, email, member_id (optional)<br>
-                Default password: <code>password123</code>
-            </div>
-            <input type="file" name="csv_file" class="form-control" accept=".csv" required>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-success">Upload Members</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+    if (roleSelect && deptGroup && deptSelect) {
+        roleSelect.addEventListener('change', function() {
+            if (this.value === 'staff') {
+                deptGroup.style.display = 'block';
+                deptSelect.required = true;
+            } else {
+                deptGroup.style.display = 'none';
+                deptSelect.required = false;
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

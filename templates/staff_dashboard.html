@@ -1,46 +1,93 @@
 {% extends 'base.html' %}
-{% from '_macros.html' import search_box, sort_header, pagination_controls %}
+{% from '_macros.html' import search_box, sort_header, pagination_controls, status_badge, priority_badge %}
+{% block title %}My Assigned Tickets — Cumin{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">My Assigned Reports</h2>
-    <a href="{{ url_for('department_queue') }}" class="btn btn-primary">View Team Queue</a>
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1">My Assigned Tickets</h2>
+        <p class="text-muted mb-0 small">Tickets claimed by or directly assigned to you for resolution</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('department_queue') }}" class="btn btn-primary">
+            <i class="bi bi-inbox me-1"></i> View Team Queue
+        </a>
+    </div>
 </div>
 
-{{ search_box(q, '<input type="hidden" name="status" value="' ~ (status or '') ~ '">') }}
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header-cumin d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div class="filter-pills">
+            <a href="?status=&q={{ q or '' }}" class="filter-pill {% if not status %}active{% endif %}">All</a>
+            <a href="?status=CLAIMED&q={{ q or '' }}" class="filter-pill {% if status == 'CLAIMED' %}active{% endif %}">Claimed</a>
+            <a href="?status=IN_PROGRESS&q={{ q or '' }}" class="filter-pill {% if status == 'IN_PROGRESS' %}active{% endif %}">In Progress</a>
+            <a href="?status=ESCALATED&q={{ q or '' }}" class="filter-pill {% if status == 'ESCALATED' %}active{% endif %}">Escalated</a>
+            <a href="?status=RESOLVED&q={{ q or '' }}" class="filter-pill {% if status == 'RESOLVED' %}active{% endif %}">Resolved</a>
+        </div>
+    </div>
 
-<div class="card shadow-sm border-0">
+    <div class="p-3 border-bottom bg-light">
+        {{ search_box(q, '<input type="hidden" name="status" value="' ~ (status or '') ~ '">', 'Search assigned tickets by title or code...') }}
+    </div>
+
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle">
-                <thead class="table-light">
+            <table class="table table-cumin align-middle">
+                <thead>
                     <tr>
-                        <th>{{ sort_header('Code', 'code', sort, dir) }}</th>
+                        <th style="width: 140px;">{{ sort_header('Ticket Code', 'code', sort, dir) }}</th>
                         <th>{{ sort_header('Title', 'title', sort, dir) }}</th>
-                        <th>{{ sort_header('Member', 'student', sort, dir) }}</th>
+                        <th>{{ sort_header('Reporter', 'student', sort, dir) }}</th>
                         <th>{{ sort_header('Status', 'status', sort, dir) }}</th>
                         <th>{{ sort_header('Priority', 'priority', sort, dir) }}</th>
                         <th>{{ sort_header('Updated', 'updated', sort, dir) }}</th>
-                        <th>Action</th>
+                        <th class="text-end pe-3">Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for ticket in pager.rows %}
                     <tr>
-                        <td><code>{{ ticket.ticket_code }}</code></td>
-                        <td>{{ ticket.title }}</td>
-                        <td>{{ ticket.student_name }}</td>
-                        <td><span class="badge bg-secondary">{{ ticket.status }}</span></td>
-                        <td>{{ ticket.priority }}</td>
-                        <td><small>{{ ticket.updated_at.strftime('%Y-%m-%d %H:%M') }}</small></td>
-                        <td><a href="{{ url_for('ticket_details', id=ticket.id) }}" class="btn btn-sm btn-outline-primary">Manage</a></td>
+                        <td><span class="ticket-code-pill">{{ ticket.ticket_code }}</span></td>
+                        <td>
+                            <a href="{{ url_for('ticket_details', id=ticket.id) }}" class="fw-bold text-decoration-none text-dark">
+                                {{ ticket.title }}
+                            </a>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 0.7rem;">
+                                    {{ (ticket.student_name or 'U')[:1] | upper }}
+                                </div>
+                                <span>{{ ticket.student_name }}</span>
+                            </div>
+                        </td>
+                        <td>{{ status_badge(ticket.status) }}</td>
+                        <td>{{ priority_badge(ticket.priority) }}</td>
+                        <td><small class="text-muted">{{ ticket.updated_at.strftime('%b %d, %H:%M') }}</small></td>
+                        <td class="text-end pe-3">
+                            <a href="{{ url_for('ticket_details', id=ticket.id) }}" class="btn btn-sm btn-outline-primary py-1 px-2">
+                                Manage <i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                        </td>
                     </tr>
                     {% else %}
-                    <tr><td colspan="7" class="text-center text-muted py-4">You have no active tickets assigned.</td></tr>
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <div class="text-muted">
+                                <i class="bi bi-check2-circle fs-1 d-block mb-2 text-success opacity-50"></i>
+                                <h6 class="fw-bold text-dark">No assigned tickets right now</h6>
+                                <p class="small text-muted mb-3">Check the team queue to claim incoming tickets.</p>
+                                <a href="{{ url_for('department_queue') }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-inbox me-1"></i> Go to Team Queue
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
 {{ pagination_controls(pager, '&q=' ~ (q or '') ~ '&status=' ~ (status or '') ~ '&sort=' ~ (sort or '') ~ '&dir=' ~ (dir or '')) }}
 {% endblock %}

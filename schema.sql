@@ -47,7 +47,7 @@ CREATE TABLE users (
     email         VARCHAR(150) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     role          VARCHAR(20) NOT NULL
-        CHECK (role IN ('member','staff','campus_admin')),
+        CHECK (role IN ('member','employee','student','staff','campus_admin','org_admin')),
     department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
     is_active     BOOLEAN NOT NULL DEFAULT TRUE,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -179,6 +179,18 @@ BEGIN
         refreshed_at    = EXCLUDED.refreshed_at;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE VIEW organizations AS
+    SELECT
+        id,
+        campus_code AS org_code,
+        campus_name AS org_name,
+        organization_type,
+        official_domain,
+        campus_password_hash AS org_password_hash,
+        is_active,
+        created_at
+    FROM campuses;
 
 SELECT setval(pg_get_serial_sequence('campuses','id'), 1, false);
 
